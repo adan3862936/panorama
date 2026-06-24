@@ -14,30 +14,41 @@
   .topbar .site{font-size:15px;font-weight:700;}
   .topbar .brand{font-size:11px;opacity:.8;margin-left:auto;}
   .roombar{position:absolute;bottom:0;left:0;right:0;z-index:5;display:flex;gap:8px;overflow-x:auto;
-    padding:12px 14px 16px;background:linear-gradient(0deg,rgba(0,0,0,.65),rgba(0,0,0,0));}
+    padding:12px 14px 16px 174px;background:linear-gradient(0deg,rgba(0,0,0,.65),rgba(0,0,0,0));}
+  .roombar.noplan{padding-left:14px;}
   .roombar button{flex:0 0 auto;background:rgba(30,34,42,.85);color:#fff;border:1px solid rgba(255,255,255,.18);
     border-radius:22px;padding:9px 16px;font-size:14px;font-family:inherit;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);}
   .roombar button.active{background:#e8a33d;color:#1a1205;border-color:#e8a33d;font-weight:700;}
   .pnlm-hotspot.custom-scene{background:#e8a33d;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,.5);}
-  .planbtn{position:absolute;right:14px;bottom:74px;z-index:6;background:#e8a33d;color:#1a1205;border:none;
-    border-radius:24px;padding:11px 18px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.5);}
-  .plan-overlay{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;padding:24px;}
+  .minimap{position:absolute;left:12px;bottom:70px;z-index:7;width:150px;max-width:40vw;border-radius:10px;
+    overflow:hidden;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.9);background:#f4efe6;line-height:0;}
+  .minimap img{width:100%;display:block;}
+  .mm-dots{position:absolute;inset:0;}
+  .mm-dot{position:absolute;width:10px;height:10px;border-radius:50%;background:#fff;border:1.5px solid #2a2f3a;transform:translate(-50%,-50%);}
+  .mm-dot.current{background:#e8a33d;border-color:#fff;box-shadow:0 0 0 3px rgba(232,163,61,.5);}
+  .mm-tag{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);color:#fff;font-size:10.5px;text-align:center;padding:3px 2px;line-height:1.2;}
+  .plan-overlay{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.88);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;}
   .plan-overlay.show{display:flex;}
+  .ohead{color:#fff;text-align:center;}
+  .ohead b{font-size:18px;display:block;}
+  .ohead span{font-size:13px;color:#cfd3da;}
   .plan-card{position:relative;display:inline-block;line-height:0;}
-  .plan-card img{max-width:94vw;max-height:86vh;display:block;border-radius:10px;}
+  .plan-card img{max-width:94vw;max-height:78vh;display:block;border-radius:10px;}
   .plan-close{position:absolute;top:-14px;right:-14px;width:38px;height:38px;border-radius:50%;background:#fff;color:#222;border:none;font-size:22px;line-height:1;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.5);z-index:2;}
-  .vmarker{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;}
-  .vmarker .dot{width:34px;height:34px;border-radius:50%;background:rgba(30,34,42,.92);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5);}
-  .vmarker.current .dot{background:#e8a33d;color:#1a1205;}
-  .vmarker .lbl{font-size:12px;color:#fff;background:rgba(0,0,0,.72);padding:1px 8px;border-radius:10px;white-space:nowrap;}
+  .vmarker{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;}
+  .vmarker .dot{min-width:30px;height:30px;padding:0 6px;border-radius:16px;background:#1f2530;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5);}
+  .vmarker .lbl{font-size:12.5px;font-weight:700;color:#1a1205;background:#fff;padding:2px 9px;border-radius:11px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.35);}
+  .vmarker.current .dot{background:#e8a33d;color:#1a1205;box-shadow:0 0 0 5px rgba(232,163,61,.35),0 2px 8px rgba(0,0,0,.5);}
+  .vmarker.current .lbl{background:#e8a33d;}
 </style>
 </head>
 <body>
 <div id="pano"></div>
 <div class="topbar"><span class="site">測試屋（含平面圖）</span><span class="brand">勝利室內裝修 · 現場全景帶看</span></div>
-<button class="planbtn" id="planbtn">🗺 平面圖</button>
+<div class="minimap" id="minimap"><img src="floorplan.jpg" alt="平面圖" /><div class="mm-dots" id="mmDots"></div><div class="mm-tag">🗺 點看平面圖</div></div>
 <div class="roombar" id="roombar"><button data-scene="s1">客廳 1</button><button data-scene="s2">客廳 2</button><button data-scene="s3">走道</button><button data-scene="s4">廚房</button><button data-scene="s5">臥室</button></div>
 <div class="plan-overlay" id="planOverlay">
+  <div class="ohead"><b>測試屋（含平面圖）</b><span>點平面圖上的標籤，進入各空間</span></div>
   <div class="plan-card" id="planCard"><button class="plan-close" id="planClose">×</button><img src="floorplan.jpg" alt="平面圖" /></div>
 </div>
 <script>
@@ -47,9 +58,11 @@
   var bar = document.getElementById('roombar');
   function syncActive(){var cur=viewer.getScene();[].forEach.call(bar.children,function(b){b.classList.toggle('active',b.getAttribute('data-scene')===cur);});markCurrent();}
   [].forEach.call(bar.children,function(b){b.onclick=function(){viewer.loadScene(b.getAttribute('data-scene'));};});
-  function markCurrent(){var cur=viewer.getScene();[].forEach.call(document.querySelectorAll('.vmarker'),function(m){m.classList.toggle('current',m.getAttribute('data-scene')===cur);});}
+  function markCurrent(){var cur=viewer.getScene();
+    [].forEach.call(document.querySelectorAll('.vmarker'),function(m){m.classList.toggle('current',m.getAttribute('data-scene')===cur);});
+    [].forEach.call(document.querySelectorAll('.mm-dot'),function(m){m.classList.toggle('current',m.getAttribute('data-scene')===cur);});}
   if(VM.floorplan){
-    var card=document.getElementById('planCard'),ov=document.getElementById('planOverlay');
+    var card=document.getElementById('planCard'),ov=document.getElementById('planOverlay'),mmDots=document.getElementById('mmDots');
     VM.markers.forEach(function(mk){
       var idx=-1; for(var i=0;i<VM.rooms.length;i++){if(VM.rooms[i].id===mk.sceneId){idx=i;break;}}
       if(idx<0) return;
@@ -60,10 +73,13 @@
       el.appendChild(dot); el.appendChild(lbl);
       el.onclick=function(){viewer.loadScene(mk.sceneId); ov.classList.remove('show');};
       card.appendChild(el);
+      var d=document.createElement('div'); d.className='mm-dot'; d.setAttribute('data-scene',mk.sceneId);
+      d.style.left=(mk.x*100)+'%'; d.style.top=(mk.y*100)+'%'; mmDots.appendChild(d);
     });
-    document.getElementById('planbtn').onclick=function(){ov.classList.add('show');markCurrent();};
+    document.getElementById('minimap').onclick=function(){ov.classList.add('show');markCurrent();};
     document.getElementById('planClose').onclick=function(){ov.classList.remove('show');};
     ov.onclick=function(e){if(e.target===ov)ov.classList.remove('show');};
+    ov.classList.add('show');
   }
   viewer.on('scenechange',syncActive); viewer.on('load',syncActive); syncActive();
 </script>
