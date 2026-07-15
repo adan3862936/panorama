@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>勝利室內裝修 · 全景帶看製作工具</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root {
+    --bg: #0e1014;
+    --panel: #171a21;
+    --panel-2: #1f232c;
+    --line: #2a2f3a;
+    --text: #e7e9ee;
+    --muted: #9aa2b1;
+    --accent: #e8a33d;
+    --accent-soft: rgba(232, 163, 61, 0.14);
+    --link: #5fb0d4;
+    --danger: #d9534f;
+    --ok: #4caf72;
+    --radius: 12px;
+    --font: "Noto Sans TC", "PingFang TC", -apple-system, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 18px;
+    background: linear-gradient(180deg, #1a1e26, #14171d);
+    border-bottom: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  .brand { display: flex; flex-direction: column; line-height: 1.15; }
+  .brand b { font-size: 16px; letter-spacing: .5px; }
+  .brand small { color: var(--muted); font-size: 11px; }
+  .brand .dot { color: var(--accent); }
+  .site-field { display: flex; align-items: center; gap: 8px; margin-left: 8px; }
+  .site-field label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .site-field input {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    min-width: 220px;
+    font-family: var(--font);
+  }
+  .site-field input:focus { outline: none; border-color: var(--accent); }
+  .spacer { flex: 1; }
+  button {
+    font-family: var(--font);
+    cursor: pointer;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--text);
+    border-radius: 9px;
+    padding: 9px 14px;
+    font-size: 13px;
+    transition: .15s ease;
+  }
+  button:hover { border-color: var(--accent); color: #fff; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #1a1205; font-weight: 700; }
+  button.primary:hover { filter: brightness(1.07); }
+  button.ghost { background: transparent; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+
+  main { flex: 1; display: flex; min-height: 0; }
+
+  /* ---- 左側：房間清單 ---- */
+  .sidebar {
+    width: 280px;
+    flex: 0 0 280px;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .sidebar h3 {
+    margin: 0; padding: 14px 16px 8px;
+    font-size: 12px; letter-spacing: 1px; color: var(--muted); font-weight: 600;
+    text-transform: none;
+  }
+  .rooms { flex: 1; overflow-y: auto; padding: 0 10px 10px; }
+  .room {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 10px; margin: 4px 0;
+    border: 1px solid transparent; border-radius: 10px;
+    background: var(--panel-2); cursor: pointer; position: relative;
+  }
+  .room:hover { border-color: var(--line); }
+  .room.active { border-color: var(--accent); background: var(--accent-soft); }
+  .room .thumb {
+    width: 52px; height: 30px; border-radius: 5px; object-fit: cover;
+    background: #000; flex: 0 0 auto; border: 1px solid var(--line);
+  }
+  .room .meta { flex: 1; min-width: 0; }
+  .room .name {
+    background: transparent; border: none; color: var(--text);
+    font-size: 14px; width: 100%; font-family: var(--font); padding: 2px 0;
+  }
+  .room .name:focus { outline: none; border-bottom: 1px solid var(--accent); }
+  .room .sub { font-size: 11px; color: var(--muted); }
+  .room .star {
+    font-size: 12px; color: var(--accent); flex: 0 0 auto;
+    width: 18px; text-align: center;
+  }
+  .room .del {
+    position: absolute; right: 6px; top: 6px; opacity: 0;
+    background: var(--danger); border: none; color: #fff;
+    width: 20px; height: 20px; border-radius: 6px; font-size: 12px;
+    line-height: 1; padding: 0; display: flex; align-items: center; justify-content: center;
+  }
+  .room:hover .del { opacity: 1; }
+  .drop-zone {
+    margin: 8px 12px 12px; padding: 18px 12px;
+    border: 2px dashed var(--line); border-radius: 12px;
+    text-align: center; color: var(--muted); font-size: 13px; cursor: pointer;
+    transition: .15s;
+  }
+  .drop-zone:hover, .drop-zone.over { border-color: var(--accent); color: var(--text); background: var(--accent-soft); }
+  .drop-zone b { color: var(--accent); display: block; margin-bottom: 4px; font-size: 14px; }
+
+  /* ---- 中央：舞台 ---- */
+  .stage { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #000; position: relative; }
+  .toolbar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 10px 14px; background: var(--panel); border-bottom: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  .mode-group { display: flex; gap: 4px; background: var(--panel-2); padding: 4px; border-radius: 10px; }
+  .mode-btn { border: 1px solid transparent; background: transparent; padding: 7px 12px; border-radius: 7px; font-size: 13px; }
+  .mode-btn.active { background: var(--accent); color: #1a1205; font-weight: 700; }
+  .toolbar .hint { font-size: 12px; color: var(--muted); }
+  .toolbar .cur-room { font-size: 13px; color: var(--text); font-weight: 600; }
+  #pano { flex: 1; min-height: 0; }
+  .empty-stage {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: var(--muted); gap: 14px; text-align: center; padding: 40px;
+  }
+  .empty-stage .big { font-size: 46px; }
+  .empty-stage h2 { margin: 0; color: var(--text); font-weight: 600; }
+
+  /* ---- 右側：熱點清單 ---- */
+  .inspector {
+    width: 300px; flex: 0 0 300px; background: var(--panel);
+    border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0;
+  }
+  .inspector h3 { margin: 0; padding: 14px 16px 8px; font-size: 12px; letter-spacing: 1px; color: var(--muted); font-weight: 600; }
+  .hs-list { flex: 1; overflow-y: auto; padding: 0 12px 12px; }
+  .hs-item { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 6px 0; }
+  .hs-item .top { display: flex; align-items: center; gap: 8px; }
+  .hs-tag { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 700; }
+  .hs-tag.scene { background: rgba(95,176,212,.18); color: var(--link); }
+  .hs-tag.info { background: rgba(232,163,61,.18); color: var(--accent); }
+  .hs-item .txt { flex: 1; font-size: 13px; color: var(--text); }
+  .hs-item .x { background: transparent; border: none; color: var(--muted); padding: 2px 6px; }
+  .hs-item .x:hover { color: var(--danger); }
+  .help-card {
+    margin: 10px 14px; padding: 12px 14px; background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 10px; font-size: 12px; color: var(--muted); line-height: 1.6;
+  }
+  .help-card b { color: var(--text); }
+
+  /* ---- modal ---- */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none;
+    align-items: center; justify-content: center; z-index: 50;
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    width: 380px; max-width: 90vw; padding: 20px; box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  .modal h4 { margin: 0 0 14px; font-size: 16px; }
+  .modal label { font-size: 12px; color: var(--muted); display: block; margin: 10px 0 5px; }
+  .modal input, .modal select, .modal textarea {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+    border-radius: 8px; padding: 9px 11px; font-size: 14px; font-family: var(--font);
+  }
+  .modal textarea { resize: vertical; min-height: 64px; }
+  .modal input:focus, .modal select:focus, .modal textarea:focus { outline: none; border-color: var(--accent); }
+  .modal .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+
+  .toast {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+    padding: 11px 18px; border-radius: 10px; font-size: 14px; opacity: 0; pointer-events: none;
+    transition: .25s; z-index: 80;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.ok { border-color: var(--ok); }
+  .toast.err { border-color: var(--danger); }
+
+  /* placing cursor */
+  .stage.placing #pano { cursor: crosshair; }
+
+  /* custom scene hotspot look */
+  .pnlm-hotspot.custom-scene {
+    background: var(--accent); border-radius: 20px; height: 28px; width: auto;
+    min-width: 28px; box-shadow: 0 2px 8px rgba(0,0,0,.4);
+  }
+
+  /* ---- 檢視切換 + 平面圖編輯 ---- */
+  .view-switch { display: flex; gap: 4px; background: var(--panel-2); padding: 4px; border-radius: 10px; margin-right: 4px; }
+  .view-switch button { border: 1px solid transparent; background: transparent; padding: 7px 12px; border-radius: 7px; font-size: 13px; }
+  .view-switch button.active { background: var(--link); color: #06222e; font-weight: 700; }
+  #planEditor { flex: 1; min-height: 0; display: none; flex-direction: column; background: #14171d; position: relative; }
+  .plan-drop {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; color: var(--muted); text-align: center; cursor: pointer; margin: 24px;
+    border: 2px dashed var(--line); border-radius: 14px;
+  }
+  .plan-drop:hover, .plan-drop.over { border-color: var(--link); color: var(--text); background: rgba(95,176,212,.08); }
+  .plan-drop .big { font-size: 40px; }
+  .plan-drop b { color: var(--link); font-size: 15px; }
+  .plan-canvas-wrap {
+    flex: 1; min-height: 0; display: none; align-items: center; justify-content: center;
+    padding: 16px; overflow: auto; position: relative;
+  }
+  .plan-stage { position: relative; display: inline-block; line-height: 0; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+  .plan-stage img { max-width: 100%; max-height: calc(100vh - 220px); display: block; user-select: none; -webkit-user-drag: none; }
+  .plan-stage.placing { cursor: crosshair; }
+  .plan-marker {
+    position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column;
+    align-items: center; gap: 3px; cursor: grab; z-index: 3;
+  }
+  .plan-marker .dot {
+    width: 30px; height: 30px; border-radius: 50%; background: var(--link); color: #06222e;
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px;
+    border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.5);
+  }
+  .plan-marker.current .dot { background: var(--accent); color: #1a1205; }
+  .plan-marker .lbl {
+    font-size: 11px; color: #fff; background: rgba(0,0,0,.6); padding: 1px 7px; border-radius: 10px;
+    white-space: nowrap; line-height: 1.6;
+  }
+  .plan-marker .mk-del {
+    position: absolute; top: -8px; right: -10px; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--danger); color: #fff; border: none; font-size: 11px; line-height: 1; cursor: pointer;
+    display: none; align-items: center; justify-content: center; padding: 0;
+  }
+  .plan-marker:hover .mk-del { display: flex; }
+  .plan-bar {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 10px; padding: 9px 14px;
+    background: var(--panel); border-top: 1px solid var(--line); font-size: 13px; color: var(--muted);
+  }
+  .plan-bar .unplaced { color: var(--accent); }
+  .plan-marker.pending .dot { background: #6b7280; border-style: dashed; }
+  /* 空間 modal 的 360 上傳區 */
+  .spot-drop {
+    border: 2px dashed var(--line); border-radius: 10px; min-height: 96px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    color: var(--muted); font-size: 13px; overflow: hidden; margin-top: 2px;
+  }
+  .spot-drop:hover, .spot-drop.over { border-color: var(--accent); color: var(--text); background: var(--accent-soft); }
+  .spot-drop b { color: var(--accent); }
+  .spot-drop img { width: 100%; height: 120px; object-fit: cover; display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <b>勝利室內裝修 <span class="dot">·</span> 全景帶看製作工具</b>
+    <small>360 環景 → 串房間 → 加標註 → 匯出帶看包</small>
+  </div>
+  <div class="site-field">
+    <label>案場名稱</label>
+    <input id="siteName" placeholder="例：和平路林宅" />
+  </div>
+  <div class="spacer"></div>
+  <button class="ghost" id="loadDemo">載入範例</button>
+  <button class="ghost" id="settingsBtn" title="GitHub 發佈設定">⚙ 設定</button>
+  <button class="ghost" id="exportBtn">匯出 ZIP</button>
+  <button class="primary" id="publishBtn">發佈到線上</button>
+</header>
+
+<main>
+  <!-- 左：房間 -->
+  <aside class="sidebar">
+    <h3>空間清單</h3>
+    <div class="rooms" id="rooms"></div>
+    <div class="drop-zone" id="sideHint" style="cursor:default">
+      <b>流程</b>
+      ① 上傳平面圖<br/>② 點平面圖各空間放標籤<br/>③ 每個標籤上傳該位置 360
+    </div>
+  </aside>
+
+  <!-- 中：舞台 -->
+  <section class="stage" id="stage">
+    <div class="toolbar" id="toolbar" style="display:none">
+      <div class="view-switch">
+        <button id="viewPano" class="active" data-view="pano">🏠 房間環景</button>
+        <button id="viewPlan" data-view="plan">🗺 平面圖</button>
+      </div>
+      <span id="panoTools" style="display:contents">
+        <div class="mode-group">
+          <button class="mode-btn active" data-mode="view">🖐 瀏覽</button>
+          <button class="mode-btn" data-mode="scene">➡ 放「走到房間」</button>
+          <button class="mode-btn" data-mode="info">📌 放「文字標註」</button>
+        </div>
+        <span class="cur-room" id="curRoom"></span>
+        <div class="spacer" style="flex:1"></div>
+        <span class="hint" id="modeHint">拖曳畫面四處看；切換模式後點畫面即可放置</span>
+        <button class="ghost" id="setStartBtn">設為起始房間</button>
+      </span>
+      <span id="planTools" style="display:none">
+        <span class="hint">點平面圖上各空間 → 放標籤並上傳該位置的 360 全景</span>
+        <div class="spacer" style="flex:1"></div>
+        <button class="ghost" id="replacePlan">更換平面圖</button>
+      </span>
+    </div>
+    <div id="pano" style="display:none"></div>
+    <div id="planEditor">
+      <div class="plan-drop" id="planDrop">
+        <div class="big">🗺</div>
+        <b>上傳平面圖</b>
+        <div>拖曳一張平面圖到這裡，或點擊選擇檔案<br/>（一般圖片即可，不必是全景）</div>
+      </div>
+      <div class="plan-canvas-wrap" id="planWrap">
+        <div class="plan-stage" id="planStage"><img id="planImg" alt="平面圖" /></div>
+      </div>
+      <div class="plan-bar" id="planBar"></div>
+    </div>
+    <input type="file" id="planInput" accept="image/*" style="display:none" />
+    <div class="empty-stage" id="emptyStage">
+      <div class="big">🏠</div>
+      <h2>還沒有房間</h2>
+      <div>從左邊把 360 環景照片拖進來，或點「載入範例試試」先體驗操作</div>
+    </div>
+  </section>
+
+  <!-- 右：熱點 -->
+  <aside class="inspector">
+    <h3>這間房的熱點</h3>
+    <div class="hs-list" id="hsList"></div>
+    <div class="help-card">
+      <b>怎麼用（平面圖優先）：</b><br/>
+      1. 先在中間上傳<b>平面圖</b><br/>
+      2. 在平面圖各空間<b>點一下放標籤</b> → 跳出視窗填名稱、上傳該位置的 360 全景<br/>
+      3. 可先全部放標籤、之後再逐一補上傳（灰色虛線標籤＝待上傳）<br/>
+      4. 全部上傳完，按右上「匯出帶看包」<br/>
+      <span style="color:var(--muted)">＊想在某空間加「此牆要拆」等施工標註：點該標籤 →「進入此全景加標註」</span>
+    </div>
+  </aside>
+</main>
+
+<!-- modal: scene 連結 -->
+<div class="modal-bg" id="sceneModal">
+  <div class="modal">
+    <h4>走到哪一間房？</h4>
+    <label>選擇目標房間</label>
+    <select id="sceneTarget"></select>
+    <label>箭頭文字（選填）</label>
+    <input id="sceneText" placeholder="例：進臥室" />
+    <div class="actions">
+      <button class="ghost" id="sceneCancel">取消</button>
+      <button class="primary" id="sceneOk">放置</button>
+    </div>
+  </div>
+</div>
+
+<!-- modal: info 標註 -->
+<div class="modal-bg" id="infoModal">
+  <div class="modal">
+    <h4>文字標註</h4>
+    <label>標註內容（工班會看到）</label>
+    <textarea id="infoText" placeholder="例：這面牆要拆除 / 此處天花有漏水痕跡 / 插座移到這"></textarea>
+    <div class="actions">
+      <button class="ghost" id="infoCancel">取消</button>
+      <button class="primary" id="infoOk">放置</button>
+    </div>
+  </div>
+</div>
+
+<!-- modal: 空間標籤（平面圖優先：名稱 + 上傳該位置 360） -->
+<div class="modal-bg" id="spotModal">
+  <div class="modal">
+    <h4 id="spotModalTitle">新增空間</h4>
+    <label>空間名稱</label>
+    <input id="spotName" placeholder="例：客廳 / 主臥 / 廚房 / 走道" />
+    <label>這個位置的 360 全景圖</label>
+    <div class="spot-drop" id="spotDrop">
+      <div id="spotDropText"><b>＋ 上傳 360 全景</b><br/>拖曳或點擊選擇（也可稍後再上傳）</div>
+      <img id="spotThumb" alt="" />
+    </div>
+    <input type="file" id="spotFile" accept="image/*" style="display:none" />
+    <div class="actions">
+      <button class="ghost" id="spotDelete" style="margin-right:auto;display:none">刪除</button>
+      <button class="ghost" id="spotEnter" style="display:none">進入此全景加標註</button>
+      <button class="ghost" id="spotCancel">取消</button>
+      <button class="primary" id="spotOk">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- modal: GitHub 發佈設定 -->
+<div class="modal-bg" id="tokenModal">
+  <div class="modal" style="width:440px">
+    <h4>GitHub 發佈設定</h4>
+    <div style="font-size:12.5px;color:var(--muted);line-height:1.7;margin-bottom:6px">
+      貼上你的 GitHub 權杖，用來把專案發佈到線上。<b style="color:var(--text)">只存在這台電腦的瀏覽器</b>，不會外流。
+    </div>
+    <label>GitHub Token（github_pat_… 或 ghp_…）</label>
+    <input id="ghToken" type="password" placeholder="貼上權杖" />
+    <label>倉庫</label>
+    <input id="ghRepo" placeholder="adan3862936/panorama" />
+    <div id="tokenStatus" style="font-size:12.5px;margin-top:8px;min-height:16px"></div>
+    <div class="actions">
+      <button class="ghost" id="tokenClear" style="margin-right:auto">清除權杖</button>
+      <button class="ghost" id="tokenTest">測試連線</button>
+      <button class="ghost" id="tokenCancel">關閉</button>
+      <button class="primary" id="tokenSave">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 發佈進度遮罩 -->
+<div class="modal-bg" id="pubModal">
+  <div class="modal" style="width:420px;text-align:center">
+    <h4 id="pubTitle">發佈到線上…</h4>
+    <div id="pubBar" style="height:8px;background:var(--panel-2);border-radius:6px;overflow:hidden;margin:14px 0">
+      <div id="pubFill" style="height:100%;width:0;background:var(--accent);transition:.2s"></div>
+    </div>
+    <div id="pubMsg" style="font-size:13px;color:var(--muted);min-height:20px"></div>
+    <div id="pubDone" style="display:none;margin-top:14px">
+      <a id="pubLink" href="#" target="_blank" style="color:var(--link);font-size:14px;word-break:break-all"></a>
+      <div class="actions" style="justify-content:center;margin-top:14px">
+        <button class="ghost" id="pubCopy">複製網址</button>
+        <button class="primary" id="pubClose">完成</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* =========================================================
+   資料模型
+   tour = { name, firstScene, scenes: [ {id, name, file, ext, url, hotspots:[]} ] }
+   hotspot = { id, type:'scene'|'info', pitch, yaw, text, targetId? }
+   ========================================================= */
+const state = {
+  scenes: [],
+  firstSceneId: null,
+  currentId: null,
+  mode: 'view',
+  viewer: null,
+  hsSeq: 1,
+  scSeq: 1,
+  pending: null,   // 暫存待放置座標
+  view: 'plan',    // 平面圖優先：預設先看平面圖
+  floorplan: null, // { file, ext, url }
+  markers: [],     // { id, sceneId, x, y }  x/y 為 0..1 比例
+  mkSeq: 1,
+  pendingMk: null, // 暫存待放置標籤座標
+  editId: null,    // 正在編輯的空間 sceneId
+  spotMode: 'new', // 'new' | 'edit'
+};
+
+const $ = (id) => document.getElementById(id);
+const rooms = $('rooms'), hsList = $('hsList'), pano = $('pano'), emptyStage = $('emptyStage'), toolbar = $('toolbar');
+
+/* ---------- toast ---------- */
+let toastTimer;
+function toast(msg, kind) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (kind || '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = 'toast'; }, 2600);
+}
+
+/* ---------- 新增房間 ---------- */
+function addScene(file, presetName) {
+  const id = 's' + (state.scSeq++);
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const url = URL.createObjectURL(file);
+  const name = presetName || file.name.replace(/\.[^.]+$/, '') || ('房間 ' + state.scenes.length);
+  const sc = { id, name, file, ext, url, hotspots: [] };
+  state.scenes.push(sc);
+  if (!state.firstSceneId) state.firstSceneId = id;
+  renderRooms();
+  selectScene(id);
+}
+
+function handleFiles(fileList) {
+  const files = [...fileList].filter(f => f.type.startsWith('image/'));
+  if (!files.length) { toast('請選擇圖片檔', 'err'); return; }
+  files.forEach(f => addScene(f));
+  toast(files.length + ' 個房間已加入', 'ok');
+}
+
+/* ---------- 渲染空間清單 ---------- */
+function renderRooms() {
+  rooms.innerHTML = '';
+  state.scenes.forEach((sc, i) => {
+    const el = document.createElement('div');
+    el.className = 'room' + (sc.id === state.currentId ? ' active' : '');
+    el.onclick = (e) => { if (e.target.classList.contains('del')) return; openSpotModal('edit', sc.id); };
+
+    const img = document.createElement('img');
+    img.className = 'thumb';
+    if (sc.url) img.src = sc.url; else img.style.background = '#2a2f3a';
+
+    const meta = document.createElement('div'); meta.className = 'meta';
+    const name = document.createElement('div');
+    name.className = 'name'; name.style.fontSize = '14px';
+    name.textContent = (i + 1) + '. ' + sc.name;
+    const sub = document.createElement('div'); sub.className = 'sub';
+    sub.textContent = sc.file ? ('已上傳全景' + (sc.hotspots.length ? ' · ' + sc.hotspots.length + ' 標註' : ''))
+                              : '待上傳全景';
+    if (!sc.file) sub.style.color = 'var(--accent)';
+    meta.appendChild(name); meta.appendChild(sub);
+
+    const star = document.createElement('div');
+    star.className = 'star'; star.textContent = sc.id === state.firstSceneId ? '★' : '';
+    star.title = '起始空間';
+
+    const del = document.createElement('button');
+    del.className = 'del'; del.textContent = '×';
+    del.onclick = (e) => { e.stopPropagation(); deleteScene(sc.id); };
+
+    el.appendChild(img); el.appendChild(meta); el.appendChild(star); el.appendChild(del);
+    rooms.appendChild(el);
+  });
+}
+
+function deleteScene(id) {
+  const sc = state.scenes.find(s => s.id === id);
+  if (!sc) return;
+  if (!confirm('刪除「' + sc.name + '」這個空間（含它的全景與標籤）？')) return;
+  state.scenes = state.scenes.filter(s => s.id !== id);
+  // 移除其他空間指向它的箭頭 + 平面圖上的標籤
+  state.scenes.forEach(s => { s.hotspots = s.hotspots.filter(h => h.targetId !== id); });
+  state.markers = state.markers.filter(m => m.sceneId !== id);
+  if (state.firstSceneId === id) state.firstSceneId = state.scenes[0] ? state.scenes[0].id : null;
+  if (state.currentId === id) { state.currentId = null; state.view = 'plan'; }
+  renderRooms();
+  applyView();
+}
+
+/* ---------- 選擇 / 顯示場景 ---------- */
+function showEmpty() {
+  if (state.viewer) { try { state.viewer.destroy(); } catch (e) {} state.viewer = null; }
+  pano.style.display = 'none'; emptyStage.style.display = 'flex'; toolbar.style.display = 'none';
+  renderHotspots();
+}
+
+function buildPannellumScenes() {
+  const scenes = {};
+  state.scenes.forEach(sc => {
+    if (!sc.url) return; // 尚未上傳全景的空間不放進檢視器
+    scenes[sc.id] = {
+      type: 'equirectangular',
+      panorama: sc.url,
+      autoLoad: true,
+      hotSpots: sc.hotspots.map(h => toPnlmHotspot(h))
+    };
+  });
+  return scenes;
+}
+
+function toPnlmHotspot(h) {
+  if (h.type === 'scene') {
+    return { id: h.id, pitch: h.pitch, yaw: h.yaw, type: 'scene', sceneId: h.targetId,
+             text: h.text || (sceneName(h.targetId)), cssClass: 'custom-scene' };
+  }
+  return { id: h.id, pitch: h.pitch, yaw: h.yaw, type: 'info', text: h.text };
+}
+
+function sceneName(id) { const s = state.scenes.find(x => x.id === id); return s ? s.name : ''; }
+
+function selectScene(id) {
+  const sc = state.scenes.find(s => s.id === id);
+  if (!sc || !sc.url) { openSpotModal('edit', id); return; } // 未上傳全景 → 改開上傳視窗
+  state.currentId = id;
+  emptyStage.style.display = 'none';
+  pano.style.display = 'block';
+  toolbar.style.display = 'flex';
+  $('curRoom').textContent = '目前：' + sceneName(id);
+  if (state.viewer) { try { state.viewer.destroy(); } catch (e) {} state.viewer = null; }
+  state.viewer = pannellum.viewer('pano', {
+    default: { firstScene: id, sceneFadeDuration: 600, autoLoad: true,
+               hotSpotDebug: false, friction: 0.15 },
+    scenes: buildPannellumScenes()
+  });
+  state.viewer.on('mousedown', onPanoClick);
+  // 觸控放置
+  state.viewer.on('touchend', onPanoClick);
+  renderRooms();
+  renderHotspots();
+  state.view = 'pano';
+  applyView();
+}
+
+/* ---------- 放置熱點 ---------- */
+function onPanoClick(e) {
+  if (state.mode === 'view') return;
+  let coords;
+  try { coords = state.viewer.mouseEventToCoords(e); }
+  catch (err) { return; }
+  if (!coords) return;
+  state.pending = { pitch: coords[0], yaw: coords[1] };
+  if (state.mode === 'scene') openSceneModal();
+  else if (state.mode === 'info') openInfoModal();
+}
+
+function setMode(m) {
+  if (m === 'scene' && state.scenes.length < 2) {
+    toast('要有兩間以上的房間，才能放「走到房間」', 'err');
+    return;
+  }
+  state.mode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  $('stage').classList.toggle('placing', m !== 'view');
+  $('modeHint').textContent = m === 'view' ? '拖曳畫面四處看；切換模式後點畫面即可放置'
+    : (m === 'scene' ? '點畫面要放箭頭的位置 → 選通往哪間' : '點畫面要標註的位置 → 輸入文字');
+}
+
+/* scene modal */
+function openSceneModal() {
+  const sel = $('sceneTarget'); sel.innerHTML = '';
+  state.scenes.filter(s => s.id !== state.currentId).forEach(s => {
+    const o = document.createElement('option'); o.value = s.id; o.textContent = s.name; sel.appendChild(o);
+  });
+  $('sceneText').value = '';
+  $('sceneModal').classList.add('show');
+}
+$('sceneCancel').onclick = () => { $('sceneModal').classList.remove('show'); state.pending = null; };
+$('sceneOk').onclick = () => {
+  const targetId = $('sceneTarget').value;
+  if (!targetId) { toast('請選目標房間', 'err'); return; }
+  const sc = state.scenes.find(s => s.id === state.currentId);
+  const h = { id: 'h' + (state.hsSeq++), type: 'scene', pitch: state.pending.pitch, yaw: state.pending.yaw,
+              targetId, text: $('sceneText').value.trim() || ('進' + sceneName(targetId)) };
+  sc.hotspots.push(h);
+  state.viewer.addHotSpot(toPnlmHotspot(h), state.currentId);
+  $('sceneModal').classList.remove('show'); state.pending = null;
+  renderHotspots(); renderRooms();
+  toast('箭頭已放置', 'ok');
+};
+
+/* info modal */
+function openInfoModal() { $('infoText').value = ''; $('infoModal').classList.add('show'); setTimeout(()=>$('infoText').focus(),50); }
+$('infoCancel').onclick = () => { $('infoModal').classList.remove('show'); state.pending = null; };
+$('infoOk').onclick = () => {
+  const txt = $('infoText').value.trim();
+  if (!txt) { toast('請輸入標註內容', 'err'); return; }
+  const sc = state.scenes.find(s => s.id === state.currentId);
+  const h = { id: 'h' + (state.hsSeq++), type: 'info', pitch: state.pending.pitch, yaw: state.pending.yaw, text: txt };
+  sc.hotspots.push(h);
+  state.viewer.addHotSpot(toPnlmHotspot(h), state.currentId);
+  $('infoModal').classList.remove('show'); state.pending = null;
+  renderHotspots(); renderRooms();
+  toast('標註已放置', 'ok');
+};
+
+/* ---------- 熱點清單 ---------- */
+function renderHotspots() {
+  hsList.innerHTML = '';
+  const sc = state.scenes.find(s => s.id === state.currentId);
+  if (!sc) return;
+  if (!sc.hotspots.length) {
+    hsList.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 4px">這間房還沒有熱點</div>';
+    return;
+  }
+  sc.hotspots.forEach(h => {
+    const el = document.createElement('div'); el.className = 'hs-item';
+    const top = document.createElement('div'); top.className = 'top';
+    const tag = document.createElement('span');
+    tag.className = 'hs-tag ' + h.type;
+    tag.textContent = h.type === 'scene' ? '走到房間' : '標註';
+    const txt = document.createElement('span'); txt.className = 'txt';
+    txt.textContent = h.type === 'scene' ? (h.text + ' → ' + sceneName(h.targetId)) : h.text;
+    const x = document.createElement('button'); x.className = 'x'; x.textContent = '🗑';
+    x.onclick = () => deleteHotspot(h.id);
+    top.appendChild(tag); top.appendChild(txt); top.appendChild(x);
+    el.appendChild(top);
+    hsList.appendChild(el);
+  });
+}
+
+function deleteHotspot(hid) {
+  const sc = state.scenes.find(s => s.id === state.currentId);
+  sc.hotspots = sc.hotspots.filter(h => h.id !== hid);
+  try { state.viewer.removeHotSpot(hid, state.currentId); } catch (e) {}
+  renderHotspots(); renderRooms();
+}
+
+/* ---------- 起始房間 ---------- */
+$('setStartBtn').onclick = () => {
+  if (!state.currentId) return;
+  state.firstSceneId = state.currentId;
+  renderRooms();
+  toast('「' + sceneName(state.currentId) + '」已設為起始房間 ★', 'ok');
+};
+
+/* =========================================================
+   平面圖（總導覽地圖）
+   ========================================================= */
+function applyView() {
+  const plan = state.view === 'plan';
+  pano.style.display = (!plan && state.currentId) ? 'block' : 'none';
+  $('planEditor').style.display = plan ? 'flex' : 'none';
+  $('panoTools').style.display = plan ? 'none' : 'contents';
+  $('planTools').style.display = plan ? 'contents' : 'none';
+  $('viewPano').classList.toggle('active', !plan);
+  $('viewPlan').classList.toggle('active', plan);
+  if (plan) renderPlan();
+}
+function switchView(v) { state.view = v; applyView(); }
+
+function loadFloorplan(file) {
+  if (!file || !file.type.startsWith('image/')) { toast('請選擇圖片檔', 'err'); return; }
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  state.floorplan = { file, ext, url: URL.createObjectURL(file) };
+  renderPlan();
+  toast('平面圖已上傳，點圖上的位置放房間標籤', 'ok');
+}
+
+function renderPlan() {
+  const drop = $('planDrop'), wrap = $('planWrap'), bar = $('planBar');
+  if (!state.floorplan) { drop.style.display = 'flex'; wrap.style.display = 'none'; bar.innerHTML = ''; return; }
+  drop.style.display = 'none'; wrap.style.display = 'flex';
+  $('planImg').src = state.floorplan.url;
+  const stage = $('planStage');
+  [...stage.querySelectorAll('.plan-marker')].forEach(m => m.remove());
+  state.markers.forEach(mk => {
+    const sc = state.scenes.find(s => s.id === mk.sceneId);
+    if (!sc) return;
+    const idx = state.scenes.indexOf(sc) + 1;
+    const pending = !sc.file;
+    const el = document.createElement('div');
+    el.className = 'plan-marker' + (mk.sceneId === state.currentId ? ' current' : '') + (pending ? ' pending' : '');
+    el.style.left = (mk.x * 100) + '%'; el.style.top = (mk.y * 100) + '%';
+    el.innerHTML = '<div class="dot">' + idx + '</div><div class="lbl"></div><button class="mk-del">×</button>';
+    el.querySelector('.lbl').textContent = sc.name + (pending ? '（待上傳）' : '');
+    el.querySelector('.mk-del').onclick = (e) => { e.stopPropagation(); deleteScene(sc.id); };
+    el.addEventListener('mousedown', (e) => { if (e.target.classList.contains('mk-del')) return; startDragMarker(e, mk, el); });
+    el.addEventListener('click', (e) => {
+      if (e.target.classList.contains('mk-del')) return;
+      if (state.justDragged) { state.justDragged = false; return; }
+      openSpotModal('edit', sc.id);
+    });
+    stage.appendChild(el);
+  });
+  const pendingCnt = state.scenes.filter(s => !s.file).length;
+  bar.innerHTML = '共 ' + state.scenes.length + ' 個空間標籤'
+    + (pendingCnt ? ' · <span class="unplaced">' + pendingCnt + ' 個待上傳全景</span>'
+                  : (state.scenes.length ? ' · 全部全景都上傳好了 ✓' : ' · 點平面圖各空間放標籤'));
+}
+
+function onPlanClick(e) {
+  if (state.justDragged) { state.justDragged = false; return; }
+  if (e.target.closest('.plan-marker')) return;
+  const img = $('planImg'); const r = img.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+  if (x < 0 || x > 1 || y < 0 || y > 1) return;
+  openSpotModal('new', { x, y });
+}
+
+function startDragMarker(e, mk, el) {
+  e.preventDefault();
+  const img = $('planImg'); const r = img.getBoundingClientRect();
+  state.justDragged = false;
+  el.style.cursor = 'grabbing';
+  function move(ev) {
+    state.justDragged = true;
+    let x = (ev.clientX - r.left) / r.width, y = (ev.clientY - r.top) / r.height;
+    x = Math.max(0, Math.min(1, x)); y = Math.max(0, Math.min(1, y));
+    mk.x = x; mk.y = y; el.style.left = (x * 100) + '%'; el.style.top = (y * 100) + '%';
+  }
+  function up() {
+    el.style.cursor = 'grab';
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', up);
+  }
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
+}
+
+/* 空間標籤 modal：新增（點平面圖）或編輯（點既有標籤） */
+let spotPendingFile = null;
+function setSpotThumb(url) {
+  const t = $('spotThumb'), txt = $('spotDropText');
+  if (url) { t.src = url; t.style.display = 'block'; txt.style.display = 'none'; }
+  else { t.removeAttribute('src'); t.style.display = 'none'; txt.style.display = 'block'; }
+}
+function openSpotModal(mode, arg) {
+  state.spotMode = mode; spotPendingFile = null;
+  if (mode === 'new') {
+    state.pendingMk = arg; state.editId = null;
+    $('spotModalTitle').textContent = '新增空間';
+    $('spotName').value = '';
+    $('spotDelete').style.display = 'none';
+    $('spotEnter').style.display = 'none';
+    setSpotThumb(null);
+  } else {
+    const sc = state.scenes.find(s => s.id === arg); if (!sc) return;
+    state.editId = arg; state.pendingMk = null;
+    $('spotModalTitle').textContent = '編輯空間';
+    $('spotName').value = sc.name;
+    $('spotDelete').style.display = 'inline-block';
+    $('spotEnter').style.display = sc.file ? 'inline-block' : 'none';
+    setSpotThumb(sc.url);
+  }
+  $('spotModal').classList.add('show');
+  setTimeout(() => $('spotName').focus(), 50);
+}
+/* 上傳時自動壓縮 360：超過 8192 寬就縮到 8192（手機 WebGL 安全尺寸），JPEG 82% */
+function compressPanorama(file) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const w = img.naturalWidth, h = img.naturalHeight;
+      if (w <= 8192) { URL.revokeObjectURL(img.src); resolve(file); return; }
+      const nw = 8192, nh = Math.round(h * 8192 / w);
+      const c = document.createElement('canvas'); c.width = nw; c.height = nh;
+      c.getContext('2d').drawImage(img, 0, 0, nw, nh);
+      c.toBlob((blob) => {
+        URL.revokeObjectURL(img.src);
+        if (!blob) { resolve(file); return; }
+        resolve(new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }));
+      }, 'image/jpeg', 0.82);
+    };
+    img.onerror = () => { URL.revokeObjectURL(img.src); resolve(file); };
+    img.src = URL.createObjectURL(file);
+  });
+}
+async function takeSpotFile(f) {
+  if (!f || !f.type.startsWith('image/')) { toast('請選擇圖片檔', 'err'); return; }
+  spotPendingFile = f; setSpotThumb(URL.createObjectURL(f)); // 先放原圖（避免按太快沒檔）
+  $('spotEnter').style.display = 'none';
+  const before = f.size;
+  const small = await compressPanorama(f);
+  spotPendingFile = small;
+  if (small !== f) toast('已自動壓縮：' + (before/1e6).toFixed(0) + 'MB → ' + (small.size/1e6).toFixed(1) + 'MB', 'ok');
+}
+$('spotDrop').onclick = () => $('spotFile').click();
+$('spotFile').onchange = (e) => { if (e.target.files[0]) takeSpotFile(e.target.files[0]); e.target.value = ''; };
+['dragenter', 'dragover'].forEach(ev => $('spotDrop').addEventListener(ev, e => { e.preventDefault(); $('spotDrop').classList.add('over'); }));
+['dragleave', 'drop'].forEach(ev => $('spotDrop').addEventListener(ev, e => { e.preventDefault(); $('spotDrop').classList.remove('over'); }));
+$('spotDrop').addEventListener('drop', e => { if (e.dataTransfer.files[0]) takeSpotFile(e.dataTransfer.files[0]); });
+function closeSpotModal() { $('spotModal').classList.remove('show'); state.pendingMk = null; state.editId = null; spotPendingFile = null; }
+$('spotCancel').onclick = closeSpotModal;
+$('spotOk').onclick = () => {
+  const name = $('spotName').value.trim();
+  if (!name) { toast('請先填空間名稱', 'err'); return; }
+  if (state.spotMode === 'new') {
+    const id = 's' + (state.scSeq++);
+    let ext = 'jpg', url = null;
+    if (spotPendingFile) { ext = (spotPendingFile.name.split('.').pop() || 'jpg').toLowerCase(); url = URL.createObjectURL(spotPendingFile); }
+    state.scenes.push({ id, name, file: spotPendingFile || null, ext, url, hotspots: [] });
+    state.markers.push({ id: 'm' + (state.mkSeq++), sceneId: id, x: state.pendingMk.x, y: state.pendingMk.y });
+    if (!state.firstSceneId) state.firstSceneId = id;
+  } else {
+    const sc = state.scenes.find(s => s.id === state.editId); if (!sc) { closeSpotModal(); return; }
+    sc.name = name;
+    if (spotPendingFile) {
+      sc.file = spotPendingFile;
+      sc.ext = (spotPendingFile.name.split('.').pop() || 'jpg').toLowerCase();
+      sc.url = URL.createObjectURL(spotPendingFile);
+    }
+  }
+  closeSpotModal();
+  renderRooms(); renderPlan();
+  toast('已儲存', 'ok');
+};
+$('spotDelete').onclick = () => { const id = state.editId; $('spotModal').classList.remove('show'); spotPendingFile = null; if (id) deleteScene(id); };
+$('spotEnter').onclick = () => { const id = state.editId; closeSpotModal(); if (id) { selectScene(id); switchView('pano'); } };
+
+// 平面圖事件綁定
+$('viewPano').onclick = () => {
+  if (state.currentId) { switchView('pano'); return; }
+  const f = state.scenes.find(s => s.url);
+  if (f) selectScene(f.id);
+  else toast('先在平面圖放標籤、上傳全景，才能看環景', 'err');
+};
+$('viewPlan').onclick = () => switchView('plan');
+$('planDrop').onclick = () => $('planInput').click();
+$('replacePlan').onclick = () => $('planInput').click();
+$('planInput').onchange = (e) => { if (e.target.files[0]) loadFloorplan(e.target.files[0]); e.target.value = ''; };
+['dragenter', 'dragover'].forEach(ev => $('planDrop').addEventListener(ev, e => { e.preventDefault(); $('planDrop').classList.add('over'); }));
+['dragleave', 'drop'].forEach(ev => $('planDrop').addEventListener(ev, e => { e.preventDefault(); $('planDrop').classList.remove('over'); }));
+$('planDrop').addEventListener('drop', e => { if (e.dataTransfer.files[0]) loadFloorplan(e.dataTransfer.files[0]); });
+$('planStage').addEventListener('click', onPlanClick);
+
+/* ---------- 事件綁定 ---------- */
+document.querySelectorAll('.mode-btn').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+
+/* ---------- 載入範例（範例平面圖 + 兩個已上傳全景的空間） ---------- */
+$('loadDemo').onclick = async () => {
+  try {
+    async function fetchFile(url, fname, type) {
+      const resp = await fetch(url); if (!resp.ok) throw new Error('找不到範例素材');
+      return new File([await resp.blob()], fname, { type });
+    }
+    loadFloorplan(await fetchFile('../_範例素材/範例-平面圖.jpg', '範例-平面圖.jpg', 'image/jpeg'));
+    const spots = [
+      { name: '客廳', img: '範例-客廳.jpg', x: 0.30, y: 0.45 },
+      { name: '臥室', img: '範例-臥室.jpg', x: 0.32, y: 0.78 }
+    ];
+    for (const sp of spots) {
+      const f = await fetchFile('../_範例素材/' + sp.img, sp.img, 'image/jpeg');
+      const id = 's' + (state.scSeq++);
+      state.scenes.push({ id, name: sp.name, file: f, ext: 'jpg', url: URL.createObjectURL(f), hotspots: [] });
+      state.markers.push({ id: 'm' + (state.mkSeq++), sceneId: id, x: sp.x, y: sp.y });
+      if (!state.firstSceneId) state.firstSceneId = id;
+    }
+    $('siteName').value = $('siteName').value || '範例案場';
+    state.view = 'plan'; applyView(); renderRooms();
+    toast('範例已載入：平面圖＋2 個空間（可點標籤試編輯）', 'ok');
+  } catch (e) { toast('範例載入失敗：' + e.message, 'err'); }
+};
+
+/* ---------- 初始：平面圖優先 ---------- */
+(function initPlanFirst() {
+  toolbar.style.display = 'flex';
+  emptyStage.style.display = 'none';
+  state.view = 'plan';
+  applyView();
+})();
+
+/* =========================================================
+   線上發佈（GitHub API，權杖存本機瀏覽器）
+   ========================================================= */
+const GH = {
+  get token() { return localStorage.getItem('pano_gh_token') || ''; },
+  set token(v) { v ? localStorage.setItem('pano_gh_token', v) : localStorage.removeItem('pano_gh_token'); },
+  get repo() { return localStorage.getItem('pano_gh_repo') || 'adan3862936/panorama'; },
+  set repo(v) { localStorage.setItem('pano_gh_repo', (v || 'adan3862936/panorama').trim()); }
+};
+function ghHeaders() { return { 'Authorization': 'Bearer ' + GH.token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }; }
+async function ghApi(path, opts) {
+  opts = opts || {};
+  const r = await fetch('https://api.github.com/repos/' + GH.repo + path, { method: opts.method || 'GET', headers: ghHeaders(), body: opts.body });
+  if (!r.ok) throw new Error('GitHub ' + r.status + '：' + (await r.text()).slice(0, 160));
+  return r.status === 204 ? null : r.json();
+}
+function bytesToB64(bytes) {
+  let bin = ''; const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  return btoa(bin);
+}
+async function fileToB64(file) { return bytesToB64(new Uint8Array(await file.arrayBuffer())); }
+function strToB64(str) { return bytesToB64(new TextEncoder().encode(str)); }
+function b64ToStr(b64) {
+  const bin = atob(b64.replace(/\n/g, '')); const u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(u);
+}
+function pagesBase() { const [owner, rn] = GH.repo.split('/'); return 'https://' + owner + '.github.io/' + rn + '/'; }
+
+// 建立 tour 設定物件（與匯出一致）
+function buildTourObject() {
+  const site = ($('siteName').value || '未命名案場').trim().replace(/[\/\\]/g, '');
+  const cfgScenes = {};
+  state.scenes.forEach(sc => {
+    cfgScenes[sc.id] = {
+      title: sc.name, type: 'equirectangular', panorama: 'images/' + sc.id + '.' + sc.ext, autoLoad: true,
+      hotSpots: sc.hotspots.map(h => h.type === 'scene'
+        ? { pitch: h.pitch, yaw: h.yaw, type: 'scene', sceneId: h.targetId, text: h.text, cssClass: 'custom-scene' }
+        : { pitch: h.pitch, yaw: h.yaw, type: 'info', text: h.text })
+    };
+  });
+  const tour = { site, firstScene: state.firstSceneId || state.scenes[0].id, rooms: state.scenes.map(s => ({ id: s.id, name: s.name })), scenes: cfgScenes };
+  if (state.floorplan) { tour.floorplan = 'floorplan.' + state.floorplan.ext; tour.markers = state.markers.map(m => ({ sceneId: m.sceneId, x: m.x, y: m.y })); }
+  return tour;
+}
+
+// 首頁總目錄（對應 make_index.py）
+function buildLanding(cases) {
+  const cards = cases.map(c => {
+    const cover = c.cover || (encodeURIComponent(c.folder) + '/images/s1.jpg');
+    return '  <a class="tour" href="' + escapeHtml(c.folder) + '/">\n'
+      + '    <div class="thumb" style="background-image:url(\'' + escapeHtml(cover) + '\')"></div>\n'
+      + '    <div class="meta"><div class="name">' + escapeHtml(c.name || c.folder) + '</div>'
+      + '<div class="sub">' + escapeHtml(c.sub || '') + '</div><div class="date">' + escapeHtml(c.date || '') + '</div></div>\n'
+      + '    <div class="go">›</div>\n  </a>';
+  }).join('\n');
+  return LANDING_TMPL.replace('__COUNT__', cases.length).replace('__CARDS__', cards);
+}
+
+/* ---- 進度遮罩 ---- */
+function pubMsg(m) { $('pubMsg').textContent = m; }
+function pubFill(f) { $('pubFill').style.width = Math.round(f * 100) + '%'; }
+function openPubModal() { $('pubTitle').textContent = '發佈到線上…'; $('pubDone').style.display = 'none'; pubFill(0); pubMsg('準備中…'); $('pubModal').classList.add('show'); }
+function pubShowDone(url) { $('pubTitle').textContent = '✅ 已發佈'; pubMsg('約 1 分鐘後生效（GitHub 建置中）'); const a = $('pubLink'); a.href = url; a.textContent = url; $('pubDone').style.display = 'block'; }
+function pubError(msg) { $('pubTitle').textContent = '發佈失敗'; pubMsg(msg); $('pubDone').style.display = 'block'; $('pubLink').textContent = ''; }
+$('pubClose').onclick = () => $('pubModal').classList.remove('show');
+$('pubCopy').onclick = () => { navigator.clipboard.writeText($('pubLink').textContent).then(() => toast('網址已複製', 'ok')); };
+
+/* ---- 設定（權杖）modal ---- */
+function openTokenModal() { $('ghToken').value = GH.token; $('ghRepo').value = GH.repo; $('tokenStatus').textContent = ''; $('tokenModal').classList.add('show'); }
+$('settingsBtn').onclick = openTokenModal;
+$('tokenCancel').onclick = () => $('tokenModal').classList.remove('show');
+$('tokenSave').onclick = () => { GH.token = $('ghToken').value.trim(); GH.repo = $('ghRepo').value.trim(); $('tokenModal').classList.remove('show'); toast('設定已儲存（只存這台電腦）', 'ok'); };
+$('tokenClear').onclick = () => { GH.token = ''; $('ghToken').value = ''; $('tokenStatus').textContent = '已清除權杖'; toast('權杖已清除', 'ok'); };
+$('tokenTest').onclick = async () => {
+  const st = $('tokenStatus'); st.style.color = 'var(--muted)'; st.textContent = '測試中…';
+  const savedT = GH.token, savedR = GH.repo;
+  GH.token = $('ghToken').value.trim(); GH.repo = $('ghRepo').value.trim();
+  try { const r = await ghApi(''); st.style.color = 'var(--ok)'; st.textContent = '✓ 連線成功，倉庫：' + r.full_name; }
+  catch (e) { st.style.color = 'var(--danger)'; st.textContent = '✗ ' + e.message; GH.token = savedT; GH.repo = savedR; }
+};
+
+/* ---- 發佈 ---- */
+$('publishBtn').onclick = async () => {
+  if (!GH.token) { toast('請先按「⚙ 設定」貼上 GitHub 權杖', 'err'); openTokenModal(); return; }
+  if (!state.scenes.length) { toast('還沒有空間，請先上傳平面圖放標籤', 'err'); return; }
+  const pend = state.scenes.filter(s => !s.file);
+  if (pend.length) { toast('還有 ' + pend.length + ' 個空間沒上傳全景：' + pend.map(s => s.name).join('、'), 'err'); return; }
+  const site = ($('siteName').value || '').trim().replace(/[\/\\]/g, '');
+  if (!site) { toast('請先填「案場名稱」（會當作網址資料夾）', 'err'); $('siteName').focus(); return; }
+  if (!state.floorplan) { if (!confirm('這個案場沒有平面圖，工班會用底部房間列切換。要繼續發佈嗎？')) return; }
+
+  openPubModal();
+  try {
+    const tour = buildTourObject();
+    const files = [];
+    pubMsg('壓縮打包全景…');
+    for (const sc of state.scenes) files.push({ path: site + '/images/' + sc.id + '.' + sc.ext, b64: await fileToB64(sc.file) });
+    if (state.floorplan) files.push({ path: site + '/floorplan.' + state.floorplan.ext, b64: await fileToB64(state.floorplan.file) });
+    pubMsg('取得檢視器函式庫…');
+    const [js, css] = await Promise.all([
+      fetch('https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.js').then(r => r.text()),
+      fetch('https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.css').then(r => r.text())
+    ]);
+    files.push({ path: site + '/lib/pannellum.js', b64: strToB64(js) });
+    files.push({ path: site + '/lib/pannellum.css', b64: strToB64(css) });
+    files.push({ path: site + '/index.html', b64: strToB64(viewerHtml(tour, true)) });
+
+    pubMsg('讀取案場清單…');
+    let cases = [];
+    try { const cj = await ghApi('/contents/cases.json'); cases = JSON.parse(b64ToStr(cj.content)); } catch (e) { cases = []; }
+    cases = cases.filter(c => c.folder !== site);
+    cases.unshift({ folder: site, name: site, sub: state.scenes.length + ' 個空間', date: new Date().toISOString().slice(0, 10) });
+    files.push({ path: 'cases.json', b64: strToB64(JSON.stringify(cases, null, 2)) });
+    files.push({ path: 'index.html', b64: strToB64(buildLanding(cases)) });
+
+    pubMsg('連線 GitHub…');
+    const ref = await ghApi('/git/ref/heads/main');
+    const baseCommitSha = ref.object.sha;
+    const baseCommit = await ghApi('/git/commits/' + baseCommitSha);
+    const treeItems = [];
+    let done = 0;
+    for (const f of files) {
+      pubMsg('上傳中… ' + (done + 1) + '/' + files.length);
+      const blob = await ghApi('/git/blobs', { method: 'POST', body: JSON.stringify({ content: f.b64, encoding: 'base64' }) });
+      treeItems.push({ path: f.path, mode: '100644', type: 'blob', sha: blob.sha });
+      done++; pubFill(done / files.length * 0.9);
+    }
+    pubMsg('建立版本…');
+    const newTree = await ghApi('/git/trees', { method: 'POST', body: JSON.stringify({ base_tree: baseCommit.tree.sha, tree: treeItems }) });
+    const commit = await ghApi('/git/commits', { method: 'POST', body: JSON.stringify({ message: '發佈案場：' + site, tree: newTree.sha, parents: [baseCommitSha] }) });
+    await ghApi('/git/refs/heads/main', { method: 'PATCH', body: JSON.stringify({ sha: commit.sha }) });
+    pubFill(1);
+    pubShowDone(pagesBase() + encodeURIComponent(site) + '/');
+  } catch (e) {
+    pubError(e.message);
+  }
+};
+
+const LANDING_TMPL = `<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>勝利室內裝修 · 現場全景帶看</title>
+<style>
+  :root{--bg:#11131a;--card:#1b1f29;--line:#2a2f3a;--text:#eceef3;--muted:#9aa2b1;--accent:#e8a33d;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:"Noto Sans TC","PingFang TC",system-ui,sans-serif;}
+  .wrap{max-width:760px;margin:0 auto;padding:32px 20px 60px;}
+  header{display:flex;flex-direction:column;gap:4px;padding:14px 0 24px;border-bottom:1px solid var(--line);}
+  header b{font-size:20px;letter-spacing:.5px;} header b span{color:var(--accent);}
+  header small{color:var(--muted);font-size:13px;}
+  h2{font-size:14px;color:var(--muted);font-weight:600;letter-spacing:1px;margin:28px 0 12px;}
+  .tour{display:flex;align-items:center;gap:16px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;text-decoration:none;color:inherit;transition:.15s;margin-bottom:12px;}
+  .tour:hover{border-color:var(--accent);transform:translateY(-1px);}
+  .tour .thumb{width:96px;height:68px;border-radius:10px;flex:0 0 auto;border:1px solid var(--line);background:#0c0e13 center/cover no-repeat;}
+  .tour .meta{flex:1;min-width:0;} .tour .name{font-size:17px;font-weight:700;}
+  .tour .sub{font-size:13px;color:var(--muted);margin-top:3px;line-height:1.5;}
+  .tour .date{font-size:12px;color:var(--accent);margin-top:4px;} .tour .go{color:var(--accent);font-size:22px;}
+  footer{margin-top:40px;color:var(--muted);font-size:12px;line-height:1.7;text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <b>勝利室內裝修 <span>·</span> 現場全景帶看</b>
+    <small>點下方案場，用手機拖曳即可 360 度查看現場；點「🗺 平面圖」可從平面圖跳到各空間。</small>
+  </header>
+  <h2>案場列表（__COUNT__）</h2>
+__CARDS__
+  <footer>
+    勝利室內裝修工作室 · 謝佑祥｜設計總監<br/>
+    www.winning0602.com · LINE @winning
+  </footer>
+</div>
+</body>
+</html>`;
+
+/* =========================================================
+   匯出帶看包
+   ========================================================= */
+$('exportBtn').onclick = async () => {
+  if (!state.scenes.length) { toast('還沒有空間可以匯出，請先上傳平面圖放標籤', 'err'); return; }
+  const pend = state.scenes.filter(s => !s.file);
+  if (pend.length) { toast('還有 ' + pend.length + ' 個空間沒上傳全景：' + pend.map(s => s.name).join('、'), 'err'); return; }
+  const site = ($('siteName').value || '未命名案場').trim();
+  $('exportBtn').disabled = true; $('exportBtn').textContent = '打包中…';
+  try {
+    const zip = new JSZip();
+    // 配置（路徑指向 images/{id}.{ext}）
+    const cfgScenes = {};
+    state.scenes.forEach(sc => {
+      cfgScenes[sc.id] = {
+        title: sc.name,
+        type: 'equirectangular',
+        panorama: 'images/' + sc.id + '.' + sc.ext,
+        autoLoad: true,
+        hotSpots: sc.hotspots.map(h => {
+          if (h.type === 'scene') return { pitch: h.pitch, yaw: h.yaw, type: 'scene', sceneId: h.targetId, text: h.text, cssClass: 'custom-scene' };
+          return { pitch: h.pitch, yaw: h.yaw, type: 'info', text: h.text };
+        })
+      };
+      zip.file('images/' + sc.id + '.' + sc.ext, sc.file);
+    });
+    const tour = {
+      site,
+      firstScene: state.firstSceneId || state.scenes[0].id,
+      rooms: state.scenes.map(s => ({ id: s.id, name: s.name })),
+      scenes: cfgScenes,
+      generated: new Date().toISOString().slice(0, 10)
+    };
+    // 平面圖 + 標籤
+    if (state.floorplan) {
+      const fpName = 'floorplan.' + state.floorplan.ext;
+      zip.file(fpName, state.floorplan.file);
+      tour.floorplan = fpName;
+      tour.markers = state.markers.map(m => ({ sceneId: m.sceneId, x: m.x, y: m.y }));
+    }
+    zip.file('如何上線.txt', howtoTxt(site));
+    // 自帶 pannellum（離線自包，不依賴 CDN）
+    let bundled = false;
+    try {
+      const [jsRes, cssRes] = await Promise.all([
+        fetch('https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.js'),
+        fetch('https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.css')
+      ]);
+      zip.file('lib/pannellum.js', await jsRes.text());
+      zip.file('lib/pannellum.css', await cssRes.text());
+      bundled = true;
+    } catch (e) {
+      // 抓不到就退回 CDN 版（仍可用，只是需連網）
+      console.warn('bundle pannellum failed, viewer will use CDN', e);
+    }
+    zip.file('index.html', viewerHtml(tour, bundled));
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = site + '-全景帶看.zip';
+    a.click();
+    toast('已匯出！解壓後丟給我上線，或拖進 GitHub 資料夾', 'ok');
+  } catch (e) {
+    toast('匯出失敗：' + e.message, 'err');
+  } finally {
+    $('exportBtn').disabled = false; $('exportBtn').textContent = '匯出帶看包 (ZIP)';
+  }
+};
+
+function howtoTxt(site) {
+  return [
+    '【' + site + '】全景帶看 — 如何上線',
+    '',
+    '方式一（最簡單）：把這整包解壓後的資料夾交給 Claude，',
+    '            說「幫我把這個案場上線」，會自動 push 到 GitHub Pages 給你網址。',
+    '',
+    '方式二（自己丟）：把整個資料夾放進你的 GitHub Pages repo，',
+    '            例如 panorama/' + site + '/，push 之後網址就是',
+    '            https://<你的帳號>.github.io/panorama/' + site + '/',
+    '',
+    '※ 注意：不要直接「點兩下」index.html 開（會變成 file:// ，瀏覽器禁止讀本機圖，畫面會空白）。',
+    '   要先本機看，請用桌面「全景帶看」資料夾裡的「看帶看包.command」開（它會起本機伺服器）。',
+    '   真正分享給工班，一律走上線後的網址。',
+    '',
+    '工班只要用手機點開網址，就能拖曳畫面 360 度看現場、點箭頭走到別間房、看你的文字標註。'
+  ].join('\n');
+}
+
+/* ---------- 輸出觀看器 HTML（自帶設定，CDN 載入 pannellum） ---------- */
+function viewerHtml(tour, bundled) {
+  const cfg = JSON.stringify({ default: { firstScene: tour.firstScene, sceneFadeDuration: 700, autoLoad: true, friction: 0.15 }, scenes: tour.scenes });
+  const roomBtns = tour.rooms.map(r => '<button data-scene="' + r.id + '">' + escapeHtml(r.name) + '</button>').join('');
+  const cssHref = bundled ? 'lib/pannellum.css' : 'https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.css';
+  const jsSrc = bundled ? 'lib/pannellum.js' : 'https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.js';
+  const hasPlan = !!tour.floorplan;
+  const vmeta = JSON.stringify({ floorplan: tour.floorplan || null, markers: tour.markers || [], rooms: tour.rooms });
+  const fp = hasPlan ? escapeHtml(tour.floorplan) : '';
+  const minimap = hasPlan ? `<div class="minimap" id="minimap"><img src="${fp}" alt="平面圖" /><div class="mm-dots" id="mmDots"></div><div class="mm-tag">🗺 點看平面圖</div></div>` : '';
+  const planOverlay = hasPlan ? `<div class="plan-overlay" id="planOverlay">
+  <div class="ohead"><b>${escapeHtml(tour.site)}</b><span>點平面圖上的標籤，進入各空間</span></div>
+  <div class="plan-card" id="planCard"><button class="plan-close" id="planClose">×</button><img src="${fp}" alt="平面圖" /></div>
+</div>` : '';
+  return `<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>${escapeHtml(tour.site)} · 現場全景帶看｜勝利室內裝修</title>
+<link rel="stylesheet" href="${cssHref}" />
+<script src="${jsSrc}"><\/script>
+<style>
+  html,body{margin:0;height:100%;background:#000;font-family:"Noto Sans TC","PingFang TC",system-ui,sans-serif;overflow:hidden;}
+  #pano{position:absolute;inset:0;}
+  .topbar{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;align-items:center;gap:10px;
+    padding:10px 14px;background:linear-gradient(180deg,rgba(0,0,0,.6),rgba(0,0,0,0));color:#fff;pointer-events:none;}
+  .topbar .site{font-size:15px;font-weight:700;}
+  .topbar .brand{font-size:11px;opacity:.8;margin-left:auto;}
+  .roombar{position:absolute;bottom:0;left:0;right:0;z-index:5;display:flex;gap:8px;overflow-x:auto;
+    padding:12px 14px 16px 174px;background:linear-gradient(0deg,rgba(0,0,0,.65),rgba(0,0,0,0));}
+  .roombar.noplan{padding-left:14px;}
+  .roombar button{flex:0 0 auto;background:rgba(30,34,42,.85);color:#fff;border:1px solid rgba(255,255,255,.18);
+    border-radius:22px;padding:9px 16px;font-size:14px;font-family:inherit;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);}
+  .roombar button.active{background:#e8a33d;color:#1a1205;border-color:#e8a33d;font-weight:700;}
+  .pnlm-hotspot.custom-scene{background:#e8a33d;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,.5);}
+  /* 常駐小地圖 */
+  .minimap{position:absolute;left:12px;bottom:70px;z-index:7;width:150px;max-width:40vw;border-radius:10px;
+    overflow:hidden;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.9);background:#f4efe6;line-height:0;}
+  .minimap img{width:100%;display:block;}
+  .mm-dots{position:absolute;inset:0;}
+  .mm-dot{position:absolute;width:10px;height:10px;border-radius:50%;background:#fff;border:1.5px solid #2a2f3a;transform:translate(-50%,-50%);}
+  .mm-dot.current{background:#e8a33d;border-color:#fff;box-shadow:0 0 0 3px rgba(232,163,61,.5);}
+  .mm-tag{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);color:#fff;font-size:10.5px;text-align:center;padding:3px 2px;line-height:1.2;}
+  /* 全螢幕平面圖 */
+  .plan-overlay{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.88);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;}
+  .plan-overlay.show{display:flex;}
+  .ohead{color:#fff;text-align:center;}
+  .ohead b{font-size:18px;display:block;}
+  .ohead span{font-size:13px;color:#cfd3da;}
+  .plan-card{position:relative;display:inline-block;line-height:0;}
+  .plan-card img{max-width:94vw;max-height:78vh;display:block;border-radius:10px;}
+  .plan-close{position:absolute;top:-14px;right:-14px;width:38px;height:38px;border-radius:50%;background:#fff;color:#222;border:none;font-size:22px;line-height:1;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.5);z-index:2;}
+  .vmarker{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;}
+  .vmarker .dot{min-width:30px;height:30px;padding:0 6px;border-radius:16px;background:#1f2530;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5);}
+  .vmarker .lbl{font-size:12.5px;font-weight:700;color:#1a1205;background:#fff;padding:2px 9px;border-radius:11px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.35);}
+  .vmarker.current .dot{background:#e8a33d;color:#1a1205;box-shadow:0 0 0 5px rgba(232,163,61,.35),0 2px 8px rgba(0,0,0,.5);}
+  .vmarker.current .lbl{background:#e8a33d;}
+</style>
+</head>
+<body>
+<div id="pano"></div>
+<div class="topbar"><span class="site">${escapeHtml(tour.site)}</span><span class="brand">勝利室內裝修 · 現場全景帶看</span></div>
+${minimap}
+<div class="roombar${hasPlan ? '' : ' noplan'}" id="roombar">${roomBtns}</div>
+${planOverlay}
+<script>
+  var TOUR = ${cfg};
+  var VM = ${vmeta};
+  var viewer = pannellum.viewer('pano', TOUR);
+  var bar = document.getElementById('roombar');
+  function syncActive(){var cur=viewer.getScene();[].forEach.call(bar.children,function(b){b.classList.toggle('active',b.getAttribute('data-scene')===cur);});markCurrent();}
+  [].forEach.call(bar.children,function(b){b.onclick=function(){viewer.loadScene(b.getAttribute('data-scene'));};});
+  function markCurrent(){var cur=viewer.getScene();
+    [].forEach.call(document.querySelectorAll('.vmarker'),function(m){m.classList.toggle('current',m.getAttribute('data-scene')===cur);});
+    [].forEach.call(document.querySelectorAll('.mm-dot'),function(m){m.classList.toggle('current',m.getAttribute('data-scene')===cur);});}
+  if(VM.floorplan){
+    var card=document.getElementById('planCard'),ov=document.getElementById('planOverlay'),mmDots=document.getElementById('mmDots');
+    VM.markers.forEach(function(mk){
+      var idx=-1; for(var i=0;i<VM.rooms.length;i++){if(VM.rooms[i].id===mk.sceneId){idx=i;break;}}
+      if(idx<0) return;
+      var el=document.createElement('div'); el.className='vmarker'; el.setAttribute('data-scene',mk.sceneId);
+      el.style.left=(mk.x*100)+'%'; el.style.top=(mk.y*100)+'%';
+      var dot=document.createElement('div'); dot.className='dot'; dot.textContent=(idx+1);
+      var lbl=document.createElement('div'); lbl.className='lbl'; lbl.textContent=VM.rooms[idx].name;
+      el.appendChild(dot); el.appendChild(lbl);
+      el.onclick=function(){viewer.loadScene(mk.sceneId); ov.classList.remove('show');};
+      card.appendChild(el);
+      var d=document.createElement('div'); d.className='mm-dot'; d.setAttribute('data-scene',mk.sceneId);
+      d.style.left=(mk.x*100)+'%'; d.style.top=(mk.y*100)+'%'; mmDots.appendChild(d);
+    });
+    document.getElementById('minimap').onclick=function(){ov.classList.add('show');markCurrent();};
+    document.getElementById('planClose').onclick=function(){ov.classList.remove('show');};
+    ov.onclick=function(e){if(e.target===ov)ov.classList.remove('show');};
+    ov.classList.add('show'); // 一打開先看平面圖
+  }
+  viewer.on('scenechange',syncActive); viewer.on('load',syncActive); syncActive();
+<\/script>
+</body>
+</html>`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+</script>
+</body>
+</html>
