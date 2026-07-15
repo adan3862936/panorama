@@ -1033,9 +1033,18 @@ $('publishBtn').onclick = async () => {
 
   openPubModal();
   try {
+    // 發佈前保險：逐張檢查，過大（>8192）就先壓縮再上傳，杜絕漏網
+    let shrunk = 0;
+    for (let i = 0; i < state.scenes.length; i++) {
+      const sc = state.scenes[i];
+      pubMsg('檢查全景 ' + (i + 1) + '/' + state.scenes.length + '…');
+      const f = await compressPanorama(sc.file);
+      if (f !== sc.file) { if (sc.url) URL.revokeObjectURL(sc.url); sc.file = f; sc.ext = 'jpg'; sc.url = URL.createObjectURL(f); shrunk++; }
+    }
+    if (shrunk) { renderRooms(); renderPlan(); toast('已自動壓縮 ' + shrunk + ' 張過大的全景', 'ok'); }
     const tour = buildTourObject();
     const files = [];
-    pubMsg('壓縮打包全景…');
+    pubMsg('打包全景…');
     for (const sc of state.scenes) files.push({ path: site + '/images/' + sc.id + '.' + sc.ext, b64: await fileToB64(sc.file) });
     if (state.floorplan) files.push({ path: site + '/floorplan.' + state.floorplan.ext, b64: await fileToB64(state.floorplan.file) });
     pubMsg('取得檢視器函式庫…');
