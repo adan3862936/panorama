@@ -281,6 +281,10 @@
     <label>案場名稱</label>
     <input id="siteName" name="pano-site" placeholder="例：和平路林宅" autocomplete="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" />
   </div>
+  <div class="site-field">
+    <label title="只用英數字，會出現在網址裡，越短越好">網址代號</label>
+    <input id="siteSlug" name="pano-slug" placeholder="例：dx22" autocomplete="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" style="min-width:110px" />
+  </div>
   <div class="spacer"></div>
   <button class="ghost" id="loadDemo">載入範例</button>
   <button class="ghost" id="settingsBtn" title="GitHub 發佈設定">⚙ 設定</button>
@@ -972,6 +976,8 @@ function b64ToStr(b64) {
   return new TextDecoder().decode(u);
 }
 function pagesBase() { const [owner, rn] = GH.repo.split('/'); return 'https://' + owner + '.github.io/' + rn + '/'; }
+// 網址代號：只留小寫英數字與 -（中文案名會讓網址爆長，所以網址一律用代號）
+function getSlug() { return ($('siteSlug').value || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, ''); }
 
 // 建立 tour 設定物件（與匯出一致）
 function buildTourObject() {
@@ -1033,7 +1039,9 @@ $('publishBtn').onclick = async () => {
   const pend = state.scenes.filter(s => !s.file);
   if (pend.length) { toast('還有 ' + pend.length + ' 個空間沒上傳全景：' + pend.map(s => s.name).join('、'), 'err'); return; }
   const site = ($('siteName').value || '').trim().replace(/[\/\\]/g, '');
-  if (!site) { toast('請先填「案場名稱」（會當作網址資料夾）', 'err'); $('siteName').focus(); return; }
+  if (!site) { toast('請先填「案場名稱」', 'err'); $('siteName').focus(); return; }
+  const slug = getSlug();
+  if (!slug) { toast('請填「網址代號」（英數字，例：dx22），網址會用它才不會太長', 'err'); $('siteSlug').focus(); return; }
   if (!state.floorplan) { if (!confirm('這個案場沒有平面圖，工班會用底部房間列切換。要繼續發佈嗎？')) return; }
 
   openPubModal();
@@ -1050,22 +1058,22 @@ $('publishBtn').onclick = async () => {
     const tour = buildTourObject();
     const files = [];
     pubMsg('打包全景…');
-    for (const sc of state.scenes) files.push({ path: site + '/images/' + sc.id + '.' + sc.ext, b64: await fileToB64(sc.file) });
-    if (state.floorplan) files.push({ path: site + '/floorplan.' + state.floorplan.ext, b64: await fileToB64(state.floorplan.file) });
+    for (const sc of state.scenes) files.push({ path: slug + '/images/' + sc.id + '.' + sc.ext, b64: await fileToB64(sc.file) });
+    if (state.floorplan) files.push({ path: slug + '/floorplan.' + state.floorplan.ext, b64: await fileToB64(state.floorplan.file) });
     pubMsg('取得檢視器函式庫…');
     const [js, css] = await Promise.all([
       fetch('https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.js').then(r => r.text()),
       fetch('https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.css').then(r => r.text())
     ]);
-    files.push({ path: site + '/lib/pannellum.js', b64: strToB64(js) });
-    files.push({ path: site + '/lib/pannellum.css', b64: strToB64(css) });
-    files.push({ path: site + '/index.html', b64: strToB64(viewerHtml(tour, true)) });
+    files.push({ path: slug + '/lib/pannellum.js', b64: strToB64(js) });
+    files.push({ path: slug + '/lib/pannellum.css', b64: strToB64(css) });
+    files.push({ path: slug + '/index.html', b64: strToB64(viewerHtml(tour, true)) });
 
     pubMsg('讀取案場清單…');
     let cases = [];
     try { const cj = await ghApi('/contents/cases.json'); cases = JSON.parse(b64ToStr(cj.content)); } catch (e) { cases = []; }
-    cases = cases.filter(c => c.folder !== site);
-    cases.unshift({ folder: site, name: site, sub: state.scenes.length + ' 個空間', date: new Date().toISOString().slice(0, 10) });
+    cases = cases.filter(c => c.folder !== slug);
+    cases.unshift({ folder: slug, name: site, sub: state.scenes.length + ' 個空間', date: new Date().toISOString().slice(0, 10) });
     files.push({ path: 'cases.json', b64: strToB64(JSON.stringify(cases, null, 2)) });
     files.push({ path: 'index.html', b64: strToB64(buildLanding(cases)) });
 
@@ -1083,10 +1091,10 @@ $('publishBtn').onclick = async () => {
     }
     pubMsg('建立版本…');
     const newTree = await ghApi('/git/trees', { method: 'POST', body: JSON.stringify({ base_tree: baseCommit.tree.sha, tree: treeItems }) });
-    const commit = await ghApi('/git/commits', { method: 'POST', body: JSON.stringify({ message: '發佈案場：' + site, tree: newTree.sha, parents: [baseCommitSha] }) });
+    const commit = await ghApi('/git/commits', { method: 'POST', body: JSON.stringify({ message: '發佈案場：' + site + '（' + slug + '）', tree: newTree.sha, parents: [baseCommitSha] }) });
     await ghApi('/git/refs/heads/main', { method: 'PATCH', body: JSON.stringify({ sha: commit.sha }) });
     pubFill(1);
-    pubShowDone(pagesBase() + encodeURIComponent(site) + '/');
+    pubShowDone(pagesBase() + slug + '/');
   } catch (e) {
     pubError(e.message);
   }
@@ -1202,7 +1210,8 @@ $('exportBtn').onclick = async () => {
     const blob = await zip.generateAsync({ type: 'blob' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = site + '-全景帶看.zip';
+    // 檔名用網址代號，這樣一鍵上線腳本會直接用短代號當網址資料夾
+    a.download = (getSlug() || site) + '-全景帶看.zip';
     a.click();
     toast('已匯出！解壓後丟給我上線，或拖進 GitHub 資料夾', 'ok');
   } catch (e) {
