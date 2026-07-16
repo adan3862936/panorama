@@ -279,7 +279,7 @@
   </div>
   <div class="site-field">
     <label>案場名稱</label>
-    <input id="siteName" placeholder="例：和平路林宅" />
+    <input id="siteName" name="pano-site" placeholder="例：和平路林宅" autocomplete="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" />
   </div>
   <div class="spacer"></div>
   <button class="ghost" id="loadDemo">載入範例</button>
@@ -824,19 +824,24 @@ function openSpotModal(mode, arg) {
   $('spotModal').classList.add('show');
   setTimeout(() => $('spotName').focus(), 50);
 }
-/* 上傳時自動壓縮 360：超過 8192 寬就縮到 8192（手機 WebGL 安全尺寸），JPEG 82% */
+/* 自動壓縮 360：① 寬 >8192 就縮到 8192（手機 WebGL 安全尺寸）
+   ② 即使尺寸沒超標，檔案 >2.5MB 也重新編碼（避免 8000px 高畫質 JPEG 動輒 10MB）
+   兩者皆否 → 原樣不動；壓完反而更大也用原檔 */
+const PANO_MAX_W = 8192, PANO_MAX_BYTES = 2500000;
 function compressPanorama(file) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
       const w = img.naturalWidth, h = img.naturalHeight;
-      if (w <= 8192) { URL.revokeObjectURL(img.src); resolve(file); return; }
-      const nw = 8192, nh = Math.round(h * 8192 / w);
+      const tooWide = w > PANO_MAX_W, tooBig = file.size > PANO_MAX_BYTES;
+      if (!tooWide && !tooBig) { URL.revokeObjectURL(img.src); resolve(file); return; }
+      const nw = tooWide ? PANO_MAX_W : w;
+      const nh = tooWide ? Math.round(h * PANO_MAX_W / w) : h;
       const c = document.createElement('canvas'); c.width = nw; c.height = nh;
       c.getContext('2d').drawImage(img, 0, 0, nw, nh);
       c.toBlob((blob) => {
         URL.revokeObjectURL(img.src);
-        if (!blob) { resolve(file); return; }
+        if (!blob || blob.size >= file.size) { resolve(file); return; }
         resolve(new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }));
       }, 'image/jpeg', 0.82);
     };
@@ -1135,8 +1140,18 @@ $('exportBtn').onclick = async () => {
   const pend = state.scenes.filter(s => !s.file);
   if (pend.length) { toast('還有 ' + pend.length + ' 個空間沒上傳全景：' + pend.map(s => s.name).join('、'), 'err'); return; }
   const site = ($('siteName').value || '未命名案場').trim();
-  $('exportBtn').disabled = true; $('exportBtn').textContent = '打包中…';
+  $('exportBtn').disabled = true;
   try {
+    // 匯出前保險：逐張檢查，過大（尺寸或檔案）就先壓縮再打包
+    let shrunk = 0;
+    for (let i = 0; i < state.scenes.length; i++) {
+      const sc = state.scenes[i];
+      $('exportBtn').textContent = '壓縮中 ' + (i + 1) + '/' + state.scenes.length + '…';
+      const f = await compressPanorama(sc.file);
+      if (f !== sc.file) { if (sc.url) URL.revokeObjectURL(sc.url); sc.file = f; sc.ext = 'jpg'; sc.url = URL.createObjectURL(f); shrunk++; }
+    }
+    if (shrunk) { renderRooms(); renderPlan(); toast('已自動壓縮 ' + shrunk + ' 張過大的全景', 'ok'); }
+    $('exportBtn').textContent = '打包中…';
     const zip = new JSZip();
     // 配置（路徑指向 images/{id}.{ext}）
     const cfgScenes = {};
