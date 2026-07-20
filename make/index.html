@@ -288,6 +288,16 @@
     border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; font-family: var(--font);
   }
   .floor-add:hover { border-color: var(--link); color: var(--text); }
+  /* 開啟案場清單 */
+  .case-row {
+    display: flex; align-items: center; gap: 12px; background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 6px 0; cursor: pointer;
+  }
+  .case-row:hover { border-color: var(--accent); }
+  .case-row .cthumb { width: 62px; height: 44px; border-radius: 6px; flex: 0 0 auto; border: 1px solid var(--line); background: #0c0e13 center/cover no-repeat; }
+  .case-row .cmeta { flex: 1; min-width: 0; }
+  .case-row .cname { font-size: 14px; font-weight: 700; }
+  .case-row .csub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
   /* 空間 modal 的 360 上傳區 */
   .spot-drop {
     border: 2px dashed var(--line); border-radius: 10px; min-height: 96px; cursor: pointer;
@@ -314,6 +324,7 @@
     <input id="siteSlug" name="pano-slug" placeholder="例：dx22" autocomplete="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" style="min-width:110px" />
   </div>
   <div class="spacer"></div>
+  <button class="ghost" id="openCaseBtn" title="把線上已發佈的案場載回來修改">📂 開啟案場</button>
   <button class="ghost" id="loadDemo">載入範例</button>
   <button class="ghost" id="settingsBtn" title="GitHub 發佈設定">⚙ 設定</button>
   <button class="ghost" id="exportBtn">匯出 ZIP</button>
@@ -440,6 +451,22 @@
   </div>
 </div>
 
+<!-- modal: 開啟已發佈的案場 -->
+<div class="modal-bg" id="openModal">
+  <div class="modal" style="width:460px">
+    <h4>開啟已發佈的案場</h4>
+    <div style="font-size:12.5px;color:var(--muted);line-height:1.7;margin-bottom:8px">
+      把線上案場整個載回來修改（平面圖、標籤、全景、文字標註都會回來）。<br/>
+      改完再按「發佈到線上」覆蓋更新即可。
+    </div>
+    <div id="caseList" style="max-height:300px;overflow-y:auto;margin-top:6px"></div>
+    <div id="openStatus" style="font-size:12.5px;margin-top:8px;min-height:16px;color:var(--muted)"></div>
+    <div class="actions">
+      <button class="ghost" id="openCancel">關閉</button>
+    </div>
+  </div>
+</div>
+
 <!-- modal: GitHub 發佈設定 -->
 <div class="modal-bg" id="tokenModal">
   <div class="modal" style="width:440px">
@@ -559,9 +586,9 @@ function renderRooms() {
     name.className = 'name'; name.style.fontSize = '14px';
     name.textContent = (i + 1) + '. ' + sc.name;
     const sub = document.createElement('div'); sub.className = 'sub';
-    sub.textContent = sc.file ? ('已上傳全景' + (sc.hotspots.length ? ' · ' + sc.hotspots.length + ' 標註' : ''))
+    sub.textContent = hasImg(sc) ? ((sc.remoteUrl && !sc.file ? '線上既有' : '已上傳全景') + (sc.hotspots.length ? ' · ' + sc.hotspots.length + ' 標註' : ''))
                               : '待上傳全景';
-    if (!sc.file) sub.style.color = 'var(--accent)';
+    if (!hasImg(sc)) sub.style.color = 'var(--accent)';
     meta.appendChild(name); meta.appendChild(sub);
 
     const star = document.createElement('div');
@@ -792,7 +819,7 @@ function renderFloorTabs() {
     inp.onchange = () => { fl.name = inp.value.trim() || fl.name; renderFloorTabs(); };
     inp.onclick = (e) => { if (fl.id === state.curFloorId) e.stopPropagation(); };
     const info = document.createElement('span');
-    if (!fl.file) { info.className = 'noimg'; info.textContent = '待上傳圖'; }
+    if (!hasImg(fl)) { info.className = 'noimg'; info.textContent = '待上傳圖'; }
     else { info.className = 'cnt'; info.textContent = cnt + ' 標籤'; }
     const del = document.createElement('button');
     del.className = 'fl-del'; del.textContent = '×'; del.title = '刪除這層';
@@ -821,7 +848,7 @@ function renderPlan() {
   const drop = $('planDrop'), wrap = $('planWrap'), bar = $('planBar');
   renderFloorTabs();
   const fl = curFloor();
-  if (!fl || !fl.file) {
+  if (!fl || !hasImg(fl)) {
     drop.style.display = 'flex'; wrap.style.display = 'none';
     bar.innerHTML = fl ? ('「' + escapeHtml(fl.name) + '」還沒有平面圖') : '先上傳第一層平面圖';
     return;
@@ -834,7 +861,7 @@ function renderPlan() {
     const sc = state.scenes.find(s => s.id === mk.sceneId);
     if (!sc) return;
     const idx = state.scenes.indexOf(sc) + 1;
-    const pending = !sc.file;
+    const pending = !hasImg(sc);
     const el = document.createElement('div');
     el.className = 'plan-marker' + (mk.sceneId === state.currentId ? ' current' : '') + (pending ? ' pending' : '');
     el.style.left = (mk.x * 100) + '%'; el.style.top = (mk.y * 100) + '%';
@@ -850,8 +877,8 @@ function renderPlan() {
     stage.appendChild(el);
   });
   const onThis = state.markers.filter(m => m.floorId === fl.id).length;
-  const pendingCnt = state.scenes.filter(s => !s.file).length;
-  const noFloorImg = state.floors.filter(f => !f.file).map(f => f.name);
+  const pendingCnt = state.scenes.filter(s => !hasImg(s)).length;
+  const noFloorImg = state.floors.filter(f => !hasImg(f)).map(f => f.name);
   bar.innerHTML = '這層 ' + onThis + ' 個標籤 · 全案 ' + state.scenes.length + ' 個空間'
     + (pendingCnt ? ' · <span class="unplaced">' + pendingCnt + ' 個待上傳全景</span>' : (state.scenes.length ? ' · 全景都上傳好了 ✓' : ''))
     + (noFloorImg.length ? ' · <span class="unplaced">' + noFloorImg.join('、') + ' 還沒平面圖</span>' : '');
@@ -908,7 +935,7 @@ function openSpotModal(mode, arg) {
     $('spotModalTitle').textContent = '編輯空間';
     $('spotName').value = sc.name;
     $('spotDelete').style.display = 'inline-block';
-    $('spotEnter').style.display = sc.file ? 'inline-block' : 'none';
+    $('spotEnter').style.display = hasImg(sc) ? 'inline-block' : 'none';
     setSpotThumb(sc.url);
   }
   $('spotModal').classList.add('show');
@@ -1062,6 +1089,10 @@ function b64ToStr(b64) {
   return new TextDecoder().decode(u);
 }
 function pagesBase() { const [owner, rn] = GH.repo.split('/'); return 'https://' + owner + '.github.io/' + rn + '/'; }
+// 這個空間/樓層有圖嗎（本機新上傳 or 線上既有）
+function hasImg(x) { return !!(x && (x.file || x.remoteUrl)); }
+// 全景在帶看包裡的路徑：線上既有沿用原路徑，新上傳的用 images/<id>.<ext>
+function panoPath(sc) { return (!sc.file && sc.remoteName) ? sc.remoteName : ('images/' + sc.id + '.' + sc.ext); }
 // 網址代號：只留小寫英數字與 -（中文案名會讓網址爆長，所以網址一律用代號）
 function getSlug() { return ($('siteSlug').value || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, ''); }
 
@@ -1071,14 +1102,14 @@ function buildTourObject() {
   const cfgScenes = {};
   state.scenes.forEach(sc => {
     cfgScenes[sc.id] = {
-      title: sc.name, type: 'equirectangular', panorama: 'images/' + sc.id + '.' + sc.ext, autoLoad: true,
+      title: sc.name, type: 'equirectangular', panorama: panoPath(sc), autoLoad: true,
       hotSpots: sc.hotspots.map(h => h.type === 'scene'
         ? { pitch: h.pitch, yaw: h.yaw, type: 'scene', sceneId: h.targetId, text: h.text, cssClass: 'custom-scene' }
         : { pitch: h.pitch, yaw: h.yaw, type: 'info', text: h.text })
     };
   });
   const tour = { site, firstScene: state.firstSceneId || state.scenes[0].id, rooms: state.scenes.map(s => ({ id: s.id, name: s.name })), scenes: cfgScenes };
-  const usable = state.floors.filter(f => f.file);
+  const usable = state.floors.filter(f => hasImg(f));
   if (usable.length) {
     tour.floors = usable.map((f, i) => ({ id: f.id, name: f.name, image: 'floorplan-' + (i + 1) + '.' + f.ext }));
     tour.markers = state.markers
@@ -1088,7 +1119,7 @@ function buildTourObject() {
   return tour;
 }
 // 樓層圖檔在帶看包裡的檔名（與 buildTourObject 對齊）
-function floorFileName(f, i) { return 'floorplan-' + (i + 1) + '.' + f.ext; }
+function floorFileName(f, i) { return (!f.file && f.remoteName) ? f.remoteName : ('floorplan-' + (i + 1) + '.' + f.ext); }
 
 // 首頁總目錄（對應 make_index.py）
 function buildLanding(cases) {
@@ -1130,13 +1161,13 @@ $('tokenTest').onclick = async () => {
 $('publishBtn').onclick = async () => {
   if (!GH.token) { toast('請先按「⚙ 設定」貼上 GitHub 權杖', 'err'); openTokenModal(); return; }
   if (!state.scenes.length) { toast('還沒有空間，請先上傳平面圖放標籤', 'err'); return; }
-  const pend = state.scenes.filter(s => !s.file);
+  const pend = state.scenes.filter(s => !hasImg(s));
   if (pend.length) { toast('還有 ' + pend.length + ' 個空間沒上傳全景：' + pend.map(s => s.name).join('、'), 'err'); return; }
   const site = ($('siteName').value || '').trim().replace(/[\/\\]/g, '');
   if (!site) { toast('請先填「案場名稱」', 'err'); $('siteName').focus(); return; }
   const slug = getSlug();
   if (!slug) { toast('請填「網址代號」（英數字，例：dx22），網址會用它才不會太長', 'err'); $('siteSlug').focus(); return; }
-  const noImgFloors = state.floors.filter(f => !f.file);
+  const noImgFloors = state.floors.filter(f => !hasImg(f));
   if (noImgFloors.length) { toast('這些樓層還沒上傳平面圖：' + noImgFloors.map(f => f.name).join('、'), 'err'); return; }
   const orphan = state.markers.filter(m => !state.floors.some(f => f.id === m.floorId)).length;
   if (!state.floors.filter(f => f.file).length) { if (!confirm('這個案場沒有平面圖，工班會用底部房間列切換。要繼續發佈嗎？')) return; }
@@ -1144,22 +1175,26 @@ $('publishBtn').onclick = async () => {
 
   openPubModal();
   try {
-    // 發佈前保險：逐張檢查，過大（>8192）就先壓縮再上傳，杜絕漏網
+    // 只處理「本機新上傳」的圖：線上既有的不重壓、不重傳（改文字標註時幾乎瞬間完成）
+    const newScenes = state.scenes.filter(s => s.file);
     let shrunk = 0;
-    for (let i = 0; i < state.scenes.length; i++) {
-      const sc = state.scenes[i];
-      pubMsg('檢查全景 ' + (i + 1) + '/' + state.scenes.length + '…');
+    for (let i = 0; i < newScenes.length; i++) {
+      const sc = newScenes[i];
+      pubMsg('檢查全景 ' + (i + 1) + '/' + newScenes.length + '…');
       const f = await compressPanorama(sc.file);
       if (f !== sc.file) { if (sc.url) URL.revokeObjectURL(sc.url); sc.file = f; sc.ext = 'jpg'; sc.url = URL.createObjectURL(f); shrunk++; }
     }
     if (shrunk) { renderRooms(); renderPlan(); toast('已自動壓縮 ' + shrunk + ' 張過大的全景', 'ok'); }
     const tour = buildTourObject();
     const files = [];
-    pubMsg('打包全景…');
-    for (const sc of state.scenes) files.push({ path: slug + '/images/' + sc.id + '.' + sc.ext, b64: await fileToB64(sc.file) });
-    const usableFloors = state.floors.filter(f => f.file);
+    const reused = state.scenes.length - newScenes.length;
+    pubMsg(newScenes.length ? '打包全景…' : '沿用線上既有全景…');
+    for (const sc of newScenes) files.push({ path: slug + '/' + panoPath(sc), b64: await fileToB64(sc.file) });
+    const usableFloors = state.floors.filter(f => hasImg(f));
     for (let i = 0; i < usableFloors.length; i++) {
-      files.push({ path: slug + '/' + floorFileName(usableFloors[i], i), b64: await fileToB64(usableFloors[i].file) });
+      const f = usableFloors[i];
+      if (!f.file) continue; // 線上既有平面圖不重傳
+      files.push({ path: slug + '/' + floorFileName(f, i), b64: await fileToB64(f.file) });
     }
     pubMsg('取得檢視器函式庫…');
     const [js, css] = await Promise.all([
@@ -1200,6 +1235,105 @@ $('publishBtn').onclick = async () => {
     pubError(e.message);
   }
 };
+
+/* =========================================================
+   開啟已發佈的案場（把線上內容載回製作器修改）
+   遠端既有的圖片以 remoteUrl 保留，不重新下載也不重新上傳；
+   只有你換過的圖才會被重新上傳。
+   ========================================================= */
+$('openCaseBtn').onclick = openCasePicker;
+$('openCancel').onclick = () => $('openModal').classList.remove('show');
+
+async function openCasePicker() {
+  const box = $('caseList'), st = $('openStatus');
+  box.innerHTML = ''; st.textContent = '讀取線上案場清單…';
+  $('openModal').classList.add('show');
+  try {
+    const base = pagesBase();
+    const cases = await (await fetch(base + 'cases.json?t=' + Date.now())).json();
+    st.textContent = '共 ' + cases.length + ' 個案場，點一個載入';
+    cases.forEach(c => {
+      const row = document.createElement('div');
+      row.className = 'case-row';
+      const th = document.createElement('div');
+      th.className = 'cthumb';
+      th.style.backgroundImage = "url('" + base + encodeURIComponent(c.folder) + "/images/s1.jpg')";
+      const meta = document.createElement('div'); meta.className = 'cmeta';
+      const nm = document.createElement('div'); nm.className = 'cname'; nm.textContent = c.name || c.folder;
+      const sb = document.createElement('div'); sb.className = 'csub';
+      sb.textContent = '/' + c.folder + '　' + (c.sub || '') + (c.date ? '　' + c.date : '');
+      meta.appendChild(nm); meta.appendChild(sb);
+      row.appendChild(th); row.appendChild(meta);
+      row.onclick = () => loadPublishedCase(c);
+      box.appendChild(row);
+    });
+  } catch (e) { st.textContent = '讀取失敗：' + e.message; }
+}
+
+async function loadPublishedCase(c) {
+  const st = $('openStatus');
+  if (state.scenes.length && !confirm('載入「' + (c.name || c.folder) + '」會清掉目前畫面上的內容，確定嗎？')) return;
+  st.textContent = '載入中…';
+  try {
+    const base = pagesBase() + encodeURIComponent(c.folder) + '/';
+    const html = await (await fetch(base + 'index.html?t=' + Date.now())).text();
+    const mT = html.match(/var TOUR = (\{[\s\S]*?\});\s*\n/);
+    const mV = html.match(/var VM = (\{[\s\S]*?\});\s*\n/);
+    if (!mT) throw new Error('這個案場的格式無法解析');
+    const TOUR = JSON.parse(mT[1]);
+    const VM = mV ? JSON.parse(mV[1]) : { floors: [], markers: [], rooms: [] };
+
+    // 重置
+    state.scenes = []; state.markers = []; state.floors = [];
+    state.currentId = null; state.firstSceneId = TOUR['default'] ? TOUR['default'].firstScene : null;
+    state.scSeq = 1; state.mkSeq = 1; state.flSeq = 1; state.hsSeq = 1;
+
+    // 舊格式相容：以前是單張 tour.floorplan，轉成一層「1F」
+    let vmFloors = VM.floors;
+    if ((!vmFloors || !vmFloors.length) && VM.floorplan) {
+      vmFloors = [{ id: 'f1', name: '1F', image: VM.floorplan }];
+      (VM.markers || []).forEach(m => { if (!m.floorId) m.floorId = 'f1'; });
+    }
+    // 樓層（沿用原本 id，遠端圖用 remoteUrl）
+    (vmFloors || []).forEach(f => {
+      state.floors.push({ id: f.id, name: f.name, file: null, ext: (f.image.split('.').pop() || 'jpg'), url: base + f.image, remoteUrl: base + f.image, remoteName: f.image });
+      const n = parseInt(String(f.id).replace(/\D/g, ''), 10); if (n >= state.flSeq) state.flSeq = n + 1;
+    });
+    state.curFloorId = state.floors[0] ? state.floors[0].id : null;
+
+    // 空間（依 VM.rooms 的順序，保留編號一致）
+    const order = (VM.rooms && VM.rooms.length) ? VM.rooms.map(r => r.id) : Object.keys(TOUR.scenes);
+    order.forEach(sid => {
+      const sc = TOUR.scenes[sid]; if (!sc) return;
+      const hs = (sc.hotSpots || []).map(h => ({
+        id: 'h' + (state.hsSeq++),
+        type: h.type === 'scene' ? 'scene' : 'info',
+        pitch: h.pitch, yaw: h.yaw, text: h.text || '', targetId: h.sceneId
+      }));
+      state.scenes.push({
+        id: sid, name: sc.title || sid, file: null,
+        ext: (sc.panorama.split('.').pop() || 'jpg'),
+        url: base + sc.panorama, remoteUrl: base + sc.panorama, remoteName: sc.panorama,
+        hotspots: hs
+      });
+      const n = parseInt(String(sid).replace(/\D/g, ''), 10); if (n >= state.scSeq) state.scSeq = n + 1;
+    });
+
+    // 標籤
+    (VM.markers || []).forEach(m => {
+      state.markers.push({ id: 'm' + (state.mkSeq++), sceneId: m.sceneId, x: m.x, y: m.y, floorId: m.floorId || state.curFloorId });
+    });
+
+    $('siteName').value = c.name || c.folder;
+    $('siteSlug').value = c.folder;
+    state.view = 'plan';
+    renderRooms(); applyView();
+    $('openModal').classList.remove('show');
+    toast('已載入「' + (c.name || c.folder) + '」：' + state.scenes.length + ' 個空間、' + state.floors.length + ' 層', 'ok');
+  } catch (e) {
+    st.textContent = '載入失敗：' + e.message;
+  }
+}
 
 const LANDING_TMPL = `<!DOCTYPE html>
 <html lang="zh-Hant">
@@ -1246,7 +1380,7 @@ __CARDS__
    ========================================================= */
 $('exportBtn').onclick = async () => {
   if (!state.scenes.length) { toast('還沒有空間可以匯出，請先上傳平面圖放標籤', 'err'); return; }
-  const pend = state.scenes.filter(s => !s.file);
+  const pend = state.scenes.filter(s => !hasImg(s));
   if (pend.length) { toast('還有 ' + pend.length + ' 個空間沒上傳全景：' + pend.map(s => s.name).join('、'), 'err'); return; }
   const site = ($('siteName').value || '未命名案場').trim();
   $('exportBtn').disabled = true;
@@ -1268,14 +1402,15 @@ $('exportBtn').onclick = async () => {
       cfgScenes[sc.id] = {
         title: sc.name,
         type: 'equirectangular',
-        panorama: 'images/' + sc.id + '.' + sc.ext,
+        panorama: panoPath(sc),
         autoLoad: true,
         hotSpots: sc.hotspots.map(h => {
           if (h.type === 'scene') return { pitch: h.pitch, yaw: h.yaw, type: 'scene', sceneId: h.targetId, text: h.text, cssClass: 'custom-scene' };
           return { pitch: h.pitch, yaw: h.yaw, type: 'info', text: h.text };
         })
       };
-      zip.file('images/' + sc.id + '.' + sc.ext, sc.file);
+      if (sc.file) zip.file(panoPath(sc), sc.file);
+      else if (sc.remoteUrl) zip.file(panoPath(sc), fetch(sc.remoteUrl).then(r => r.blob()));
     });
     const tour = {
       site,
@@ -1285,7 +1420,10 @@ $('exportBtn').onclick = async () => {
       generated: new Date().toISOString().slice(0, 10)
     };
     // 平面圖 + 標籤
-    state.floors.filter(f => f.file).forEach((f, i) => zip.file(floorFileName(f, i), f.file));
+    state.floors.filter(f => hasImg(f)).forEach((f, i) => {
+      if (f.file) zip.file(floorFileName(f, i), f.file);
+      else zip.file(floorFileName(f, i), fetch(f.remoteUrl).then(r => r.blob()));
+    });
     zip.file('如何上線.txt', howtoTxt(site));
     // 自帶 pannellum（離線自包，不依賴 CDN）
     let bundled = false;
