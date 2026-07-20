@@ -260,6 +260,34 @@
   }
   .plan-bar .unplaced { color: var(--accent); }
   .plan-marker.pending .dot { background: #6b7280; border-style: dashed; }
+  /* 樓層頁籤 */
+  .floor-tabs {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    padding: 9px 14px; background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  .floor-tab {
+    display: flex; align-items: center; gap: 5px; background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 8px; padding: 5px 6px 5px 10px; cursor: pointer;
+  }
+  .floor-tab.active { border-color: var(--link); background: rgba(95,176,212,.14); }
+  .floor-tab input {
+    background: transparent; border: none; color: var(--text); font-family: var(--font);
+    font-size: 13px; width: 52px; padding: 2px 0; cursor: pointer;
+  }
+  .floor-tab.active input { font-weight: 700; cursor: text; }
+  .floor-tab input:focus { outline: none; border-bottom: 1px solid var(--link); cursor: text; }
+  .floor-tab .cnt { font-size: 11px; color: var(--muted); }
+  .floor-tab .noimg { font-size: 11px; color: var(--accent); }
+  .floor-tab .fl-del {
+    background: transparent; border: none; color: var(--muted); font-size: 14px;
+    line-height: 1; padding: 0 3px; cursor: pointer;
+  }
+  .floor-tab .fl-del:hover { color: var(--danger); }
+  .floor-add {
+    background: transparent; border: 1px dashed var(--line); color: var(--muted);
+    border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; font-family: var(--font);
+  }
+  .floor-add:hover { border-color: var(--link); color: var(--text); }
   /* 空間 modal 的 360 上傳區 */
   .spot-drop {
     border: 2px dashed var(--line); border-radius: 10px; min-height: 96px; cursor: pointer;
@@ -329,10 +357,11 @@
     </div>
     <div id="pano" style="display:none"></div>
     <div id="planEditor">
+      <div class="floor-tabs" id="floorTabs"></div>
       <div class="plan-drop" id="planDrop">
         <div class="big">🗺</div>
         <b>上傳平面圖</b>
-        <div>拖曳一張平面圖到這裡，或點擊選擇檔案<br/>（一般圖片即可，不必是全景）</div>
+        <div>拖曳這一層的平面圖到這裡，或點擊選擇檔案<br/>（一般圖片即可，不必是全景）</div>
       </div>
       <div class="plan-canvas-wrap" id="planWrap">
         <div class="plan-stage" id="planStage"><img id="planImg" alt="平面圖" /></div>
@@ -470,8 +499,10 @@ const state = {
   scSeq: 1,
   pending: null,   // 暫存待放置座標
   view: 'plan',    // 平面圖優先：預設先看平面圖
-  floorplan: null, // { file, ext, url }
-  markers: [],     // { id, sceneId, x, y }  x/y 為 0..1 比例
+  floors: [],      // [{ id, name, file, ext, url }] 多樓層平面圖
+  curFloorId: null,// 目前編輯中的樓層
+  flSeq: 1,
+  markers: [],     // { id, sceneId, x, y, floorId }  x/y 為 0..1 比例
   mkSeq: 1,
   pendingMk: null, // 暫存待放置標籤座標
   editId: null,    // 正在編輯的空間 sceneId
@@ -731,22 +762,75 @@ function applyView() {
 }
 function switchView(v) { state.view = v; applyView(); }
 
+/* ---------- 樓層 ---------- */
+function curFloor() { return state.floors.find(f => f.id === state.curFloorId) || null; }
+function addFloor(name) {
+  const id = 'f' + (state.flSeq++);
+  state.floors.push({ id, name: name || ((state.floors.length + 1) + 'F'), file: null, ext: 'jpg', url: null });
+  state.curFloorId = id;
+  renderFloorTabs(); renderPlan();
+  return id;
+}
+function deleteFloor(id) {
+  const fl = state.floors.find(f => f.id === id); if (!fl) return;
+  const n = state.markers.filter(m => m.floorId === id).length;
+  if (!confirm('刪除樓層「' + fl.name + '」？' + (n ? '這一層的 ' + n + ' 個空間標籤也會一起移除（全景本身保留在清單裡）。' : ''))) return;
+  state.markers = state.markers.filter(m => m.floorId !== id);
+  state.floors = state.floors.filter(f => f.id !== id);
+  if (state.curFloorId === id) state.curFloorId = state.floors[0] ? state.floors[0].id : null;
+  renderFloorTabs(); renderPlan(); renderRooms();
+}
+function renderFloorTabs() {
+  const box = $('floorTabs'); box.innerHTML = '';
+  state.floors.forEach(fl => {
+    const cnt = state.markers.filter(m => m.floorId === fl.id).length;
+    const el = document.createElement('div');
+    el.className = 'floor-tab' + (fl.id === state.curFloorId ? ' active' : '');
+    el.onclick = (e) => { if (e.target.tagName === 'INPUT' || e.target.classList.contains('fl-del')) return; state.curFloorId = fl.id; renderFloorTabs(); renderPlan(); };
+    const inp = document.createElement('input');
+    inp.value = fl.name; inp.title = '點兩下可改樓層名稱';
+    inp.onchange = () => { fl.name = inp.value.trim() || fl.name; renderFloorTabs(); };
+    inp.onclick = (e) => { if (fl.id === state.curFloorId) e.stopPropagation(); };
+    const info = document.createElement('span');
+    if (!fl.file) { info.className = 'noimg'; info.textContent = '待上傳圖'; }
+    else { info.className = 'cnt'; info.textContent = cnt + ' 標籤'; }
+    const del = document.createElement('button');
+    del.className = 'fl-del'; del.textContent = '×'; del.title = '刪除這層';
+    del.onclick = (e) => { e.stopPropagation(); deleteFloor(fl.id); };
+    el.appendChild(inp); el.appendChild(info); el.appendChild(del);
+    box.appendChild(el);
+  });
+  const add = document.createElement('button');
+  add.className = 'floor-add'; add.textContent = '＋ 新增樓層';
+  add.onclick = () => addFloor();
+  box.appendChild(add);
+}
+
 function loadFloorplan(file) {
   if (!file || !file.type.startsWith('image/')) { toast('請選擇圖片檔', 'err'); return; }
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-  state.floorplan = { file, ext, url: URL.createObjectURL(file) };
-  renderPlan();
-  toast('平面圖已上傳，點圖上的位置放房間標籤', 'ok');
+  let fl = curFloor();
+  if (!fl) { addFloor('1F'); fl = curFloor(); }
+  if (fl.url) URL.revokeObjectURL(fl.url);
+  fl.file = file; fl.ext = ext; fl.url = URL.createObjectURL(file);
+  renderFloorTabs(); renderPlan();
+  toast(fl.name + ' 平面圖已上傳，點圖上的位置放標籤', 'ok');
 }
 
 function renderPlan() {
   const drop = $('planDrop'), wrap = $('planWrap'), bar = $('planBar');
-  if (!state.floorplan) { drop.style.display = 'flex'; wrap.style.display = 'none'; bar.innerHTML = ''; return; }
+  renderFloorTabs();
+  const fl = curFloor();
+  if (!fl || !fl.file) {
+    drop.style.display = 'flex'; wrap.style.display = 'none';
+    bar.innerHTML = fl ? ('「' + escapeHtml(fl.name) + '」還沒有平面圖') : '先上傳第一層平面圖';
+    return;
+  }
   drop.style.display = 'none'; wrap.style.display = 'flex';
-  $('planImg').src = state.floorplan.url;
+  $('planImg').src = fl.url;
   const stage = $('planStage');
   [...stage.querySelectorAll('.plan-marker')].forEach(m => m.remove());
-  state.markers.forEach(mk => {
+  state.markers.filter(m => m.floorId === fl.id).forEach(mk => {
     const sc = state.scenes.find(s => s.id === mk.sceneId);
     if (!sc) return;
     const idx = state.scenes.indexOf(sc) + 1;
@@ -765,10 +849,12 @@ function renderPlan() {
     });
     stage.appendChild(el);
   });
+  const onThis = state.markers.filter(m => m.floorId === fl.id).length;
   const pendingCnt = state.scenes.filter(s => !s.file).length;
-  bar.innerHTML = '共 ' + state.scenes.length + ' 個空間標籤'
-    + (pendingCnt ? ' · <span class="unplaced">' + pendingCnt + ' 個待上傳全景</span>'
-                  : (state.scenes.length ? ' · 全部全景都上傳好了 ✓' : ' · 點平面圖各空間放標籤'));
+  const noFloorImg = state.floors.filter(f => !f.file).map(f => f.name);
+  bar.innerHTML = '這層 ' + onThis + ' 個標籤 · 全案 ' + state.scenes.length + ' 個空間'
+    + (pendingCnt ? ' · <span class="unplaced">' + pendingCnt + ' 個待上傳全景</span>' : (state.scenes.length ? ' · 全景都上傳好了 ✓' : ''))
+    + (noFloorImg.length ? ' · <span class="unplaced">' + noFloorImg.join('、') + ' 還沒平面圖</span>' : '');
 }
 
 function onPlanClick(e) {
@@ -877,7 +963,7 @@ $('spotOk').onclick = () => {
     let ext = 'jpg', url = null;
     if (spotPendingFile) { ext = (spotPendingFile.name.split('.').pop() || 'jpg').toLowerCase(); url = URL.createObjectURL(spotPendingFile); }
     state.scenes.push({ id, name, file: spotPendingFile || null, ext, url, hotspots: [] });
-    state.markers.push({ id: 'm' + (state.mkSeq++), sceneId: id, x: state.pendingMk.x, y: state.pendingMk.y });
+    state.markers.push({ id: 'm' + (state.mkSeq++), sceneId: id, x: state.pendingMk.x, y: state.pendingMk.y, floorId: state.curFloorId });
     if (!state.firstSceneId) state.firstSceneId = id;
   } else {
     const sc = state.scenes.find(s => s.id === state.editId); if (!sc) { closeSpotModal(); return; }
@@ -930,7 +1016,7 @@ $('loadDemo').onclick = async () => {
       const f = await fetchFile('../_範例素材/' + sp.img, sp.img, 'image/jpeg');
       const id = 's' + (state.scSeq++);
       state.scenes.push({ id, name: sp.name, file: f, ext: 'jpg', url: URL.createObjectURL(f), hotspots: [] });
-      state.markers.push({ id: 'm' + (state.mkSeq++), sceneId: id, x: sp.x, y: sp.y });
+      state.markers.push({ id: 'm' + (state.mkSeq++), sceneId: id, x: sp.x, y: sp.y, floorId: state.curFloorId });
       if (!state.firstSceneId) state.firstSceneId = id;
     }
     $('siteName').value = $('siteName').value || '範例案場';
@@ -992,9 +1078,17 @@ function buildTourObject() {
     };
   });
   const tour = { site, firstScene: state.firstSceneId || state.scenes[0].id, rooms: state.scenes.map(s => ({ id: s.id, name: s.name })), scenes: cfgScenes };
-  if (state.floorplan) { tour.floorplan = 'floorplan.' + state.floorplan.ext; tour.markers = state.markers.map(m => ({ sceneId: m.sceneId, x: m.x, y: m.y })); }
+  const usable = state.floors.filter(f => f.file);
+  if (usable.length) {
+    tour.floors = usable.map((f, i) => ({ id: f.id, name: f.name, image: 'floorplan-' + (i + 1) + '.' + f.ext }));
+    tour.markers = state.markers
+      .filter(m => usable.some(f => f.id === m.floorId))
+      .map(m => ({ sceneId: m.sceneId, x: m.x, y: m.y, floorId: m.floorId }));
+  }
   return tour;
 }
+// 樓層圖檔在帶看包裡的檔名（與 buildTourObject 對齊）
+function floorFileName(f, i) { return 'floorplan-' + (i + 1) + '.' + f.ext; }
 
 // 首頁總目錄（對應 make_index.py）
 function buildLanding(cases) {
@@ -1042,7 +1136,11 @@ $('publishBtn').onclick = async () => {
   if (!site) { toast('請先填「案場名稱」', 'err'); $('siteName').focus(); return; }
   const slug = getSlug();
   if (!slug) { toast('請填「網址代號」（英數字，例：dx22），網址會用它才不會太長', 'err'); $('siteSlug').focus(); return; }
-  if (!state.floorplan) { if (!confirm('這個案場沒有平面圖，工班會用底部房間列切換。要繼續發佈嗎？')) return; }
+  const noImgFloors = state.floors.filter(f => !f.file);
+  if (noImgFloors.length) { toast('這些樓層還沒上傳平面圖：' + noImgFloors.map(f => f.name).join('、'), 'err'); return; }
+  const orphan = state.markers.filter(m => !state.floors.some(f => f.id === m.floorId)).length;
+  if (!state.floors.filter(f => f.file).length) { if (!confirm('這個案場沒有平面圖，工班會用底部房間列切換。要繼續發佈嗎？')) return; }
+  else if (orphan) { if (!confirm('有 ' + orphan + ' 個標籤所屬樓層已被刪除，發佈時會略過。要繼續嗎？')) return; }
 
   openPubModal();
   try {
@@ -1059,7 +1157,10 @@ $('publishBtn').onclick = async () => {
     const files = [];
     pubMsg('打包全景…');
     for (const sc of state.scenes) files.push({ path: slug + '/images/' + sc.id + '.' + sc.ext, b64: await fileToB64(sc.file) });
-    if (state.floorplan) files.push({ path: slug + '/floorplan.' + state.floorplan.ext, b64: await fileToB64(state.floorplan.file) });
+    const usableFloors = state.floors.filter(f => f.file);
+    for (let i = 0; i < usableFloors.length; i++) {
+      files.push({ path: slug + '/' + floorFileName(usableFloors[i], i), b64: await fileToB64(usableFloors[i].file) });
+    }
     pubMsg('取得檢視器函式庫…');
     const [js, css] = await Promise.all([
       fetch('https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.js').then(r => r.text()),
@@ -1184,12 +1285,7 @@ $('exportBtn').onclick = async () => {
       generated: new Date().toISOString().slice(0, 10)
     };
     // 平面圖 + 標籤
-    if (state.floorplan) {
-      const fpName = 'floorplan.' + state.floorplan.ext;
-      zip.file(fpName, state.floorplan.file);
-      tour.floorplan = fpName;
-      tour.markers = state.markers.map(m => ({ sceneId: m.sceneId, x: m.x, y: m.y }));
-    }
+    state.floors.filter(f => f.file).forEach((f, i) => zip.file(floorFileName(f, i), f.file));
     zip.file('如何上線.txt', howtoTxt(site));
     // 自帶 pannellum（離線自包，不依賴 CDN）
     let bundled = false;
@@ -1246,13 +1342,15 @@ function viewerHtml(tour, bundled) {
   const roomBtns = tour.rooms.map(r => '<button data-scene="' + r.id + '">' + escapeHtml(r.name) + '</button>').join('');
   const cssHref = bundled ? 'lib/pannellum.css' : 'https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.css';
   const jsSrc = bundled ? 'lib/pannellum.js' : 'https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.js';
-  const hasPlan = !!tour.floorplan;
-  const vmeta = JSON.stringify({ floorplan: tour.floorplan || null, markers: tour.markers || [], rooms: tour.rooms });
-  const fp = hasPlan ? escapeHtml(tour.floorplan) : '';
-  const minimap = hasPlan ? `<div class="minimap" id="minimap"><img src="${fp}" alt="平面圖" /><div class="mm-dots" id="mmDots"></div><div class="mm-tag">🗺 點看平面圖</div></div>` : '';
+  const floors = tour.floors || [];
+  const hasPlan = floors.length > 0;
+  const vmeta = JSON.stringify({ floors, markers: tour.markers || [], rooms: tour.rooms });
+  const fp0 = hasPlan ? escapeHtml(floors[0].image) : '';
+  const minimap = hasPlan ? `<div class="minimap" id="minimap"><img id="mmImg" src="${fp0}" alt="平面圖" /><div class="mm-dots" id="mmDots"></div><div class="mm-tag" id="mmTag">🗺 點看平面圖</div></div>` : '';
   const planOverlay = hasPlan ? `<div class="plan-overlay" id="planOverlay">
   <div class="ohead"><b>${escapeHtml(tour.site)}</b><span>點平面圖上的標籤，進入各空間</span></div>
-  <div class="plan-card" id="planCard"><button class="plan-close" id="planClose">×</button><img src="${fp}" alt="平面圖" /></div>
+  <div class="floor-bar" id="floorBar"></div>
+  <div class="plan-card" id="planCard"><button class="plan-close" id="planClose">×</button><img id="planImg" src="${fp0}" alt="平面圖" /></div>
 </div>` : '';
   return `<!DOCTYPE html>
 <html lang="zh-Hant">
@@ -1290,6 +1388,11 @@ function viewerHtml(tour, bundled) {
   .ohead{color:#fff;text-align:center;}
   .ohead b{font-size:18px;display:block;}
   .ohead span{font-size:13px;color:#cfd3da;}
+  .floor-bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+  .floor-bar button{background:rgba(30,34,42,.9);color:#fff;border:1px solid rgba(255,255,255,.22);
+    border-radius:20px;padding:7px 16px;font-size:14px;font-family:inherit;cursor:pointer;}
+  .floor-bar button.active{background:#e8a33d;color:#1a1205;border-color:#e8a33d;font-weight:700;}
+  .mm-tag b{color:#e8a33d;}
   .plan-card{position:relative;display:inline-block;line-height:0;}
   .plan-card img{max-width:94vw;max-height:78vh;display:block;border-radius:10px;}
   .plan-close{position:absolute;top:-14px;right:-14px;width:38px;height:38px;border-radius:50%;background:#fff;color:#222;border:none;font-size:22px;line-height:1;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.5);z-index:2;}
@@ -1313,27 +1416,74 @@ ${planOverlay}
   var bar = document.getElementById('roombar');
   function syncActive(){var cur=viewer.getScene();[].forEach.call(bar.children,function(b){b.classList.toggle('active',b.getAttribute('data-scene')===cur);});markCurrent();}
   [].forEach.call(bar.children,function(b){b.onclick=function(){viewer.loadScene(b.getAttribute('data-scene'));};});
+  function floorOfScene(sid){for(var i=0;i<VM.markers.length;i++){if(VM.markers[i].sceneId===sid)return VM.markers[i].floorId;}return null;}
   function markCurrent(){var cur=viewer.getScene();
     [].forEach.call(document.querySelectorAll('.vmarker'),function(m){m.classList.toggle('current',m.getAttribute('data-scene')===cur);});
     [].forEach.call(document.querySelectorAll('.mm-dot'),function(m){m.classList.toggle('current',m.getAttribute('data-scene')===cur);});}
-  if(VM.floorplan){
+  if(VM.floors && VM.floors.length){
     var card=document.getElementById('planCard'),ov=document.getElementById('planOverlay'),mmDots=document.getElementById('mmDots');
-    VM.markers.forEach(function(mk){
-      var idx=-1; for(var i=0;i<VM.rooms.length;i++){if(VM.rooms[i].id===mk.sceneId){idx=i;break;}}
-      if(idx<0) return;
-      var el=document.createElement('div'); el.className='vmarker'; el.setAttribute('data-scene',mk.sceneId);
-      el.style.left=(mk.x*100)+'%'; el.style.top=(mk.y*100)+'%';
-      var dot=document.createElement('div'); dot.className='dot'; dot.textContent=(idx+1);
-      var lbl=document.createElement('div'); lbl.className='lbl'; lbl.textContent=VM.rooms[idx].name;
-      el.appendChild(dot); el.appendChild(lbl);
-      el.onclick=function(){viewer.loadScene(mk.sceneId); ov.classList.remove('show');};
-      card.appendChild(el);
-      var d=document.createElement('div'); d.className='mm-dot'; d.setAttribute('data-scene',mk.sceneId);
-      d.style.left=(mk.x*100)+'%'; d.style.top=(mk.y*100)+'%'; mmDots.appendChild(d);
-    });
-    document.getElementById('minimap').onclick=function(){ov.classList.add('show');markCurrent();};
+    var planImg=document.getElementById('planImg'),mmImg=document.getElementById('mmImg'),mmTag=document.getElementById('mmTag');
+    var floorBar=document.getElementById('floorBar');
+    var shownFloor=null;              // 大平面圖目前顯示哪層
+    var multi=VM.floors.length>1;
+
+    // 只畫某一層的標籤（大圖可點、小地圖不可點）
+    function renderFloor(fid){
+      shownFloor=fid;
+      var fl=null; for(var i=0;i<VM.floors.length;i++){if(VM.floors[i].id===fid)fl=VM.floors[i];}
+      if(!fl) return;
+      planImg.src=fl.image;
+      [].forEach.call(card.querySelectorAll('.vmarker'),function(m){m.remove();});
+      VM.markers.filter(function(mk){return mk.floorId===fid;}).forEach(function(mk){
+        var idx=-1; for(var i=0;i<VM.rooms.length;i++){if(VM.rooms[i].id===mk.sceneId){idx=i;break;}}
+        if(idx<0) return;
+        var el=document.createElement('div'); el.className='vmarker'; el.setAttribute('data-scene',mk.sceneId);
+        el.style.left=(mk.x*100)+'%'; el.style.top=(mk.y*100)+'%';
+        var dot=document.createElement('div'); dot.className='dot'; dot.textContent=(idx+1);
+        var lbl=document.createElement('div'); lbl.className='lbl'; lbl.textContent=VM.rooms[idx].name;
+        el.appendChild(dot); el.appendChild(lbl);
+        el.onclick=function(){viewer.loadScene(mk.sceneId); ov.classList.remove('show');};
+        card.appendChild(el);
+      });
+      [].forEach.call(floorBar.children,function(b){b.classList.toggle('active',b.getAttribute('data-floor')===fid);});
+      markCurrent();
+    }
+    // 小地圖跟著「目前所在樓層」走
+    function renderMini(fid){
+      var fl=null; for(var i=0;i<VM.floors.length;i++){if(VM.floors[i].id===fid)fl=VM.floors[i];}
+      if(!fl) return;
+      mmImg.src=fl.image; mmDots.innerHTML='';
+      VM.markers.filter(function(mk){return mk.floorId===fid;}).forEach(function(mk){
+        var d=document.createElement('div'); d.className='mm-dot'; d.setAttribute('data-scene',mk.sceneId);
+        d.style.left=(mk.x*100)+'%'; d.style.top=(mk.y*100)+'%'; mmDots.appendChild(d);
+      });
+      mmTag.innerHTML = multi ? ('🗺 <b>'+fl.name+'</b> · 點看平面圖') : '🗺 點看平面圖';
+      markCurrent();
+    }
+    // 樓層頁籤（只有多層才顯示）
+    if(multi){
+      VM.floors.forEach(function(fl){
+        var b=document.createElement('button'); b.textContent=fl.name; b.setAttribute('data-floor',fl.id);
+        b.onclick=function(){renderFloor(fl.id);};
+        floorBar.appendChild(b);
+      });
+    } else { floorBar.style.display='none'; }
+
+    document.getElementById('minimap').onclick=function(){
+      var f=floorOfScene(viewer.getScene())||shownFloor||VM.floors[0].id;
+      renderFloor(f); ov.classList.add('show');
+    };
     document.getElementById('planClose').onclick=function(){ov.classList.remove('show');};
     ov.onclick=function(e){if(e.target===ov)ov.classList.remove('show');};
+
+    // 換場景時，小地圖自動切到該場景所在樓層
+    var lastMiniFloor=null;
+    viewer.on('scenechange',function(){
+      var f=floorOfScene(viewer.getScene());
+      if(f && f!==lastMiniFloor){lastMiniFloor=f; renderMini(f);}
+    });
+    var startFloor=floorOfScene(TOUR['default'].firstScene)||VM.floors[0].id;
+    lastMiniFloor=startFloor; renderMini(startFloor); renderFloor(startFloor);
     ov.classList.add('show'); // 一打開先看平面圖
   }
   viewer.on('scenechange',syncActive); viewer.on('load',syncActive); syncActive();
