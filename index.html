@@ -7,18 +7,24 @@
 <style>
   :root{--bg:#11131a;--card:#1b1f29;--line:#2a2f3a;--text:#eceef3;--muted:#9aa2b1;--accent:#e8a33d;}
   *{box-sizing:border-box;}
-  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:"Noto Sans TC","PingFang TC",system-ui,sans-serif;}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);
+    font-family:"Noto Sans TC","PingFang TC",system-ui,sans-serif;}
   .wrap{max-width:760px;margin:0 auto;padding:32px 20px 60px;}
   header{display:flex;flex-direction:column;gap:4px;padding:14px 0 24px;border-bottom:1px solid var(--line);}
-  header b{font-size:20px;letter-spacing:.5px;} header b span{color:var(--accent);}
+  header b{font-size:20px;letter-spacing:.5px;}
+  header b span{color:var(--accent);}
   header small{color:var(--muted);font-size:13px;}
   h2{font-size:14px;color:var(--muted);font-weight:600;letter-spacing:1px;margin:28px 0 12px;}
-  .tour{display:flex;align-items:center;gap:16px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;text-decoration:none;color:inherit;transition:.15s;margin-bottom:12px;}
+  .tour{display:flex;align-items:center;gap:16px;background:var(--card);border:1px solid var(--line);
+    border-radius:14px;padding:14px 16px;text-decoration:none;color:inherit;transition:.15s;margin-bottom:12px;}
   .tour:hover{border-color:var(--accent);transform:translateY(-1px);}
-  .tour .thumb{width:96px;height:68px;border-radius:10px;flex:0 0 auto;border:1px solid var(--line);background:#0c0e13 center/cover no-repeat;}
-  .tour .meta{flex:1;min-width:0;} .tour .name{font-size:17px;font-weight:700;}
+  .tour .thumb{width:96px;height:68px;border-radius:10px;flex:0 0 auto;border:1px solid var(--line);
+    background:#0c0e13 center/cover no-repeat;}
+  .tour .meta{flex:1;min-width:0;}
+  .tour .name{font-size:17px;font-weight:700;}
   .tour .sub{font-size:13px;color:var(--muted);margin-top:3px;line-height:1.5;}
-  .tour .date{font-size:12px;color:var(--accent);margin-top:4px;} .tour .go{color:var(--accent);font-size:22px;}
+  .tour .date{font-size:12px;color:var(--accent);margin-top:4px;}
+  .tour .go{color:var(--accent);font-size:22px;}
   footer{margin-top:40px;color:var(--muted);font-size:12px;line-height:1.7;text-align:center;}
 </style>
 </head>
@@ -28,27 +34,45 @@
     <b>勝利室內裝修 <span>·</span> 現場全景帶看</b>
     <small>點下方案場，用手機拖曳即可 360 度查看現場；點「🗺 平面圖」可從平面圖跳到各空間。</small>
   </header>
+
   <h2>案場列表（4）</h2>
   <a class="tour" href="ssh/">
     <div class="thumb" style="background-image:url('ssh/images/s1.jpg')"></div>
-    <div class="meta"><div class="name">南投市南興路 210 號，何小姐</div><div class="sub">17 個空間</div><div class="date">2026-07-20</div></div>
+    <div class="meta">
+      <div class="name">南投市南興路210號</div>
+      <div class="sub">17 個空間</div>
+      <div class="date">2026-07-20</div>
+    </div>
     <div class="go">›</div>
   </a>
   <a class="tour" href="dx22/">
     <div class="thumb" style="background-image:url('dx22/images/s1.jpg')"></div>
-    <div class="meta"><div class="name">大興11街150巷22號</div><div class="sub">15 個全景點 · 大門／車庫／花園／客廳／餐廳／廚房／房間／浴室／後巷</div><div class="date">2026-07-16</div></div>
+    <div class="meta">
+      <div class="name">大興11街150巷22號</div>
+      <div class="sub">15 個全景點 · 大門／車庫／花園／客廳／餐廳／廚房／房間／浴室／後巷</div>
+      <div class="date">2026-07-16</div>
+    </div>
     <div class="go">›</div>
   </a>
   <a class="tour" href="wh7/">
     <div class="thumb" style="background-image:url('wh7/images/s1.jpg')"></div>
-    <div class="meta"><div class="name">武漢街7號</div><div class="sub">8 個全景點 · 二樓媽媽房／小孩房・三樓小孩房</div><div class="date">2026-06-26</div></div>
+    <div class="meta">
+      <div class="name">武漢街7號</div>
+      <div class="sub">8 個全景點 · 二樓媽媽房／小孩房・三樓小孩房</div>
+      <div class="date">2026-06-26</div>
+    </div>
     <div class="go">›</div>
   </a>
   <a class="tour" href="demo/">
     <div class="thumb" style="background-image:url('demo/images/s1.jpg')"></div>
-    <div class="meta"><div class="name">測試屋（含平面圖）</div><div class="sub">5 個空間 · 客廳／走道／廚房／臥室 · 測試用</div><div class="date">2026-06-24</div></div>
+    <div class="meta">
+      <div class="name">測試屋（含平面圖）</div>
+      <div class="sub">5 個空間 · 客廳／走道／廚房／臥室 · 測試用</div>
+      <div class="date">2026-06-24</div>
+    </div>
     <div class="go">›</div>
   </a>
+
   <footer>
     勝利室內裝修工作室 · 謝佑祥｜設計總監<br/>
     www.winning0602.com · LINE @winning
