@@ -751,12 +751,33 @@ function renderHotspots() {
     tag.textContent = h.type === 'scene' ? '走到房間' : '標註';
     const txt = document.createElement('span'); txt.className = 'txt';
     txt.textContent = h.type === 'scene' ? (h.text + ' → ' + sceneName(h.targetId)) : h.text;
-    const x = document.createElement('button'); x.className = 'x'; x.textContent = '🗑';
+    txt.title = '點一下改文字';
+    const ed = document.createElement('button'); ed.className = 'x'; ed.textContent = '✏️'; ed.title = '修改文字';
+    const x = document.createElement('button'); x.className = 'x'; x.textContent = '🗑'; x.title = '刪除';
     x.onclick = () => deleteHotspot(h.id);
-    top.appendChild(tag); top.appendChild(txt); top.appendChild(x);
+    const startEdit = () => editHotspotText(h, sc);
+    ed.onclick = startEdit; txt.onclick = startEdit; txt.style.cursor = 'pointer';
+    top.appendChild(tag); top.appendChild(txt); top.appendChild(ed); top.appendChild(x);
     el.appendChild(top);
     hsList.appendChild(el);
   });
+}
+
+/* 就地修改標註文字（位置不變） */
+function editHotspotText(h, sc) {
+  const cur = h.text || '';
+  const next = prompt(h.type === 'scene' ? '修改箭頭文字：' : '修改標註文字：', cur);
+  if (next === null) return;                 // 取消
+  const t = next.trim();
+  if (!t) { toast('文字不能空白', 'err'); return; }
+  if (t === cur) return;
+  h.text = t;
+  // 讓畫面上的熱點立刻反映新文字
+  if (state.viewer && state.currentId === sc.id) {
+    try { state.viewer.removeHotSpot(h.id, sc.id); state.viewer.addHotSpot(toPnlmHotspot(h), sc.id); } catch (e) {}
+  }
+  renderHotspots(); renderRooms();
+  toast('已修改，記得按「發佈到線上」更新', 'ok');
 }
 
 function deleteHotspot(hid) {
@@ -1253,8 +1274,10 @@ async function openCasePicker() {
     const cases = await (await fetch(base + 'cases.json?t=' + Date.now())).json();
     st.textContent = '共 ' + cases.length + ' 個案場，點一個載入';
     cases.forEach(c => {
-      const row = document.createElement('div');
+      const row = document.createElement('button');
       row.className = 'case-row';
+      row.type = 'button';
+      row.style.width = '100%'; row.style.textAlign = 'left'; row.style.font = 'inherit'; row.style.color = 'inherit';
       const th = document.createElement('div');
       th.className = 'cthumb';
       th.style.backgroundImage = "url('" + base + encodeURIComponent(c.folder) + "/images/s1.jpg')";
