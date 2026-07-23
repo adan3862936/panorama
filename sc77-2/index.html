@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>南區国國光路7巷7號，格局變更渲染 · 現場全景帶看｜勝利室內裝修</title>
+<link rel="stylesheet" href="lib/pannellum.css" />
+<script src="lib/pannellum.js"></script>
+<style>
+  html,body{margin:0;height:100%;background:#000;font-family:"Noto Sans TC","PingFang TC",system-ui,sans-serif;overflow:hidden;}
+  #pano{position:absolute;inset:0;}
+  .topbar{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;align-items:center;gap:10px;
+    padding:10px 14px;background:linear-gradient(180deg,rgba(0,0,0,.6),rgba(0,0,0,0));color:#fff;pointer-events:none;}
+  .topbar .site{font-size:15px;font-weight:700;}
+  .topbar .brand{font-size:11px;opacity:.8;margin-left:auto;}
+  .roombar{position:absolute;bottom:0;left:0;right:0;z-index:5;display:flex;gap:8px;overflow-x:auto;
+    padding:12px 14px 16px 174px;background:linear-gradient(0deg,rgba(0,0,0,.65),rgba(0,0,0,0));}
+  .roombar.noplan{padding-left:14px;}
+  .roombar button{flex:0 0 auto;background:rgba(30,34,42,.85);color:#fff;border:1px solid rgba(255,255,255,.18);
+    border-radius:22px;padding:9px 16px;font-size:14px;font-family:inherit;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);}
+  .roombar button.active{background:#e8a33d;color:#1a1205;border-color:#e8a33d;font-weight:700;}
+  .pnlm-hotspot.custom-scene{background:#e8a33d;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,.5);}
+  /* 常駐小地圖 */
+  .minimap{position:absolute;left:12px;bottom:70px;z-index:7;width:150px;max-width:40vw;border-radius:10px;
+    overflow:hidden;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.9);background:#f4efe6;line-height:0;}
+  .minimap img{width:100%;display:block;}
+  .mm-dots{position:absolute;inset:0;}
+  .mm-dot{position:absolute;width:10px;height:10px;border-radius:50%;background:#fff;border:1.5px solid #2a2f3a;transform:translate(-50%,-50%);}
+  .mm-dot.current{background:#e8a33d;border-color:#fff;box-shadow:0 0 0 3px rgba(232,163,61,.5);}
+  .mm-tag{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);color:#fff;font-size:10.5px;text-align:center;padding:3px 2px;line-height:1.2;}
+  /* 全螢幕平面圖 */
+  .plan-overlay{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.88);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;}
+  .plan-overlay.show{display:flex;}
+  .ohead{color:#fff;text-align:center;}
+  .ohead b{font-size:18px;display:block;}
+  .ohead span{font-size:13px;color:#cfd3da;}
+  .floor-bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+  .floor-bar button{background:rgba(30,34,42,.9);color:#fff;border:1px solid rgba(255,255,255,.22);
+    border-radius:20px;padding:7px 16px;font-size:14px;font-family:inherit;cursor:pointer;}
+  .floor-bar button.active{background:#e8a33d;color:#1a1205;border-color:#e8a33d;font-weight:700;}
+  .mm-tag b{color:#e8a33d;}
+  .plan-card{position:relative;display:inline-block;line-height:0;}
+  .plan-card img{max-width:94vw;max-height:78vh;display:block;border-radius:10px;}
+  .plan-close{position:absolute;top:-14px;right:-14px;width:38px;height:38px;border-radius:50%;background:#fff;color:#222;border:none;font-size:22px;line-height:1;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.5);z-index:2;}
+  .vmarker{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;}
+  .vmarker .dot{min-width:30px;height:30px;padding:0 6px;border-radius:16px;background:#1f2530;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5);}
+  .vmarker .lbl{font-size:12.5px;font-weight:700;color:#1a1205;background:#fff;padding:2px 9px;border-radius:11px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.35);}
+  .vmarker.current .dot{background:#e8a33d;color:#1a1205;box-shadow:0 0 0 5px rgba(232,163,61,.35),0 2px 8px rgba(0,0,0,.5);}
+  .vmarker.current .lbl{background:#e8a33d;}
+</style>
+</head>
+<body>
+<div id="pano"></div>
+<div class="topbar"><span class="site">南區国國光路7巷7號，格局變更渲染</span><span class="brand">勝利室內裝修 · 現場全景帶看</span></div>
+<div class="minimap" id="minimap"><img id="mmImg" src="floorplan-1.png" alt="平面圖" /><div class="mm-dots" id="mmDots"></div><div class="mm-tag" id="mmTag">🗺 點看平面圖</div></div>
+<div class="roombar" id="roombar"><button data-scene="s1">中央走道</button><button data-scene="s2">四樓梯間</button><button data-scene="s3">A戶客廳</button><button data-scene="s5">A戶浴室</button><button data-scene="s6">A戶陽台</button><button data-scene="s7">B戶走道</button><button data-scene="s8">B戶客廳</button><button data-scene="s9">B戶浴室</button><button data-scene="s10">Ｂ戶晾衣間</button><button data-scene="s11">Ｂ戶房間</button><button data-scene="s12">A戶房間</button></div>
+<div class="plan-overlay" id="planOverlay">
+  <div class="ohead"><b>南區国國光路7巷7號，格局變更渲染</b><span>點平面圖上的標籤，進入各空間</span></div>
+  <div class="floor-bar" id="floorBar"></div>
+  <div class="plan-card" id="planCard"><button class="plan-close" id="planClose">×</button><img id="planImg" src="floorplan-1.png" alt="平面圖" /></div>
+</div>
+<script>
+  var TOUR = {"default":{"firstScene":"s1","sceneFadeDuration":700,"autoLoad":true,"friction":0.15},"scenes":{"s1":{"title":"中央走道","type":"equirectangular","panorama":"images/s1.jpg","autoLoad":true,"hotSpots":[]},"s2":{"title":"四樓梯間","type":"equirectangular","panorama":"images/s2.jpg","autoLoad":true,"hotSpots":[]},"s3":{"title":"A戶客廳","type":"equirectangular","panorama":"images/s3.jpg","autoLoad":true,"hotSpots":[]},"s5":{"title":"A戶浴室","type":"equirectangular","panorama":"images/s5.jpg","autoLoad":true,"hotSpots":[]},"s6":{"title":"A戶陽台","type":"equirectangular","panorama":"images/s6.jpg","autoLoad":true,"hotSpots":[]},"s7":{"title":"B戶走道","type":"equirectangular","panorama":"images/s7.jpg","autoLoad":true,"hotSpots":[]},"s8":{"title":"B戶客廳","type":"equirectangular","panorama":"images/s8.jpg","autoLoad":true,"hotSpots":[]},"s9":{"title":"B戶浴室","type":"equirectangular","panorama":"images/s9.jpg","autoLoad":true,"hotSpots":[]},"s10":{"title":"Ｂ戶晾衣間","type":"equirectangular","panorama":"images/s10.jpg","autoLoad":true,"hotSpots":[]},"s11":{"title":"Ｂ戶房間","type":"equirectangular","panorama":"images/s11.jpg","autoLoad":true,"hotSpots":[]},"s12":{"title":"A戶房間","type":"equirectangular","panorama":"images/s12.jpg","autoLoad":true,"hotSpots":[]}}};
+  var VM = {"floors":[{"id":"f1","name":"1F","image":"floorplan-1.png"}],"markers":[{"sceneId":"s1","x":0.5898297573765648,"y":0.6825843431831863,"floorId":"f1"},{"sceneId":"s2","x":0.7127294213227963,"y":0.8182662862826183,"floorId":"f1"},{"sceneId":"s3","x":0.4196609919125522,"y":0.6859345146177402,"floorId":"f1"},{"sceneId":"s5","x":0.35348424978765836,"y":0.33919177114141386,"floorId":"f1"},{"sceneId":"s6","x":0.3582111599394365,"y":0.8266417148690031,"floorId":"f1"},{"sceneId":"s7","x":0.5236530152516711,"y":0.4396969141780302,"floorId":"f1"},{"sceneId":"s8","x":0.7056390560951291,"y":0.4765487999581229,"floorId":"f1"},{"sceneId":"s9","x":0.3558477048635474,"y":0.24371188525662837,"floorId":"f1"},{"sceneId":"s10","x":0.3605746150153255,"y":0.17000811369644306,"floorId":"f1"},{"sceneId":"s11","x":0.7174563314745744,"y":0.2654879995812286,"floorId":"f1"},{"sceneId":"s12","x":0.33930351933232394,"y":0.4899494856963384,"floorId":"f1"}],"rooms":[{"id":"s1","name":"中央走道"},{"id":"s2","name":"四樓梯間"},{"id":"s3","name":"A戶客廳"},{"id":"s5","name":"A戶浴室"},{"id":"s6","name":"A戶陽台"},{"id":"s7","name":"B戶走道"},{"id":"s8","name":"B戶客廳"},{"id":"s9","name":"B戶浴室"},{"id":"s10","name":"Ｂ戶晾衣間"},{"id":"s11","name":"Ｂ戶房間"},{"id":"s12","name":"A戶房間"}]};
+  var viewer = pannellum.viewer('pano', TOUR);
+  var bar = document.getElementById('roombar');
+  function syncActive(){var cur=viewer.getScene();[].forEach.call(bar.children,function(b){b.classList.toggle('active',b.getAttribute('data-scene')===cur);});markCurrent();}
+  [].forEach.call(bar.children,function(b){b.onclick=function(){viewer.loadScene(b.getAttribute('data-scene'));};});
+  function floorOfScene(sid){for(var i=0;i<VM.markers.length;i++){if(VM.markers[i].sceneId===sid)return VM.markers[i].floorId;}return null;}
+  function markCurrent(){var cur=viewer.getScene();
+    [].forEach.call(document.querySelectorAll('.vmarker'),function(m){m.classList.toggle('current',m.getAttribute('data-scene')===cur);});
+    [].forEach.call(document.querySelectorAll('.mm-dot'),function(m){m.classList.toggle('current',m.getAttribute('data-scene')===cur);});}
+  if(VM.floors && VM.floors.length){
+    var card=document.getElementById('planCard'),ov=document.getElementById('planOverlay'),mmDots=document.getElementById('mmDots');
+    var planImg=document.getElementById('planImg'),mmImg=document.getElementById('mmImg'),mmTag=document.getElementById('mmTag');
+    var floorBar=document.getElementById('floorBar');
+    var shownFloor=null;              // 大平面圖目前顯示哪層
+    var multi=VM.floors.length>1;
+
+    // 只畫某一層的標籤（大圖可點、小地圖不可點）
+    function renderFloor(fid){
+      shownFloor=fid;
+      var fl=null; for(var i=0;i<VM.floors.length;i++){if(VM.floors[i].id===fid)fl=VM.floors[i];}
+      if(!fl) return;
+      planImg.src=fl.image;
+      [].forEach.call(card.querySelectorAll('.vmarker'),function(m){m.remove();});
+      VM.markers.filter(function(mk){return mk.floorId===fid;}).forEach(function(mk){
+        var idx=-1; for(var i=0;i<VM.rooms.length;i++){if(VM.rooms[i].id===mk.sceneId){idx=i;break;}}
+        if(idx<0) return;
+        var el=document.createElement('div'); el.className='vmarker'; el.setAttribute('data-scene',mk.sceneId);
+        el.style.left=(mk.x*100)+'%'; el.style.top=(mk.y*100)+'%';
+        var dot=document.createElement('div'); dot.className='dot'; dot.textContent=(idx+1);
+        var lbl=document.createElement('div'); lbl.className='lbl'; lbl.textContent=VM.rooms[idx].name;
+        el.appendChild(dot); el.appendChild(lbl);
+        el.onclick=function(){viewer.loadScene(mk.sceneId); ov.classList.remove('show');};
+        card.appendChild(el);
+      });
+      [].forEach.call(floorBar.children,function(b){b.classList.toggle('active',b.getAttribute('data-floor')===fid);});
+      markCurrent();
+    }
+    // 小地圖跟著「目前所在樓層」走
+    function renderMini(fid){
+      var fl=null; for(var i=0;i<VM.floors.length;i++){if(VM.floors[i].id===fid)fl=VM.floors[i];}
+      if(!fl) return;
+      mmImg.src=fl.image; mmDots.innerHTML='';
+      VM.markers.filter(function(mk){return mk.floorId===fid;}).forEach(function(mk){
+        var d=document.createElement('div'); d.className='mm-dot'; d.setAttribute('data-scene',mk.sceneId);
+        d.style.left=(mk.x*100)+'%'; d.style.top=(mk.y*100)+'%'; mmDots.appendChild(d);
+      });
+      mmTag.innerHTML = multi ? ('🗺 <b>'+fl.name+'</b> · 點看平面圖') : '🗺 點看平面圖';
+      markCurrent();
+    }
+    // 樓層頁籤（只有多層才顯示）
+    if(multi){
+      VM.floors.forEach(function(fl){
+        var b=document.createElement('button'); b.textContent=fl.name; b.setAttribute('data-floor',fl.id);
+        b.onclick=function(){renderFloor(fl.id);};
+        floorBar.appendChild(b);
+      });
+    } else { floorBar.style.display='none'; }
+
+    document.getElementById('minimap').onclick=function(){
+      var f=floorOfScene(viewer.getScene())||shownFloor||VM.floors[0].id;
+      renderFloor(f); ov.classList.add('show');
+    };
+    document.getElementById('planClose').onclick=function(){ov.classList.remove('show');};
+    ov.onclick=function(e){if(e.target===ov)ov.classList.remove('show');};
+
+    // 換場景時，小地圖自動切到該場景所在樓層
+    var lastMiniFloor=null;
+    viewer.on('scenechange',function(){
+      var f=floorOfScene(viewer.getScene());
+      if(f && f!==lastMiniFloor){lastMiniFloor=f; renderMini(f);}
+    });
+    var startFloor=floorOfScene(TOUR['default'].firstScene)||VM.floors[0].id;
+    lastMiniFloor=startFloor; renderMini(startFloor); renderFloor(startFloor);
+    ov.classList.add('show'); // 一打開先看平面圖
+  }
+  viewer.on('scenechange',syncActive); viewer.on('load',syncActive); syncActive();
+</script>
+</body>
+</html>
