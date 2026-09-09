@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>五權西路翻新 20260902 · 現場全景帶看｜勝利室內裝修</title>
+<link rel="stylesheet" href="lib/pannellum.css" />
+<script src="lib/pannellum.js"></script>
+<style>
+  html,body{margin:0;height:100%;background:#000;font-family:"Noto Sans TC","PingFang TC",system-ui,sans-serif;overflow:hidden;}
+  #pano{position:absolute;inset:0;}
+  .topbar{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;align-items:center;gap:10px;
+    padding:10px 14px;background:linear-gradient(180deg,rgba(0,0,0,.6),rgba(0,0,0,0));color:#fff;pointer-events:none;}
+  .topbar .site{font-size:15px;font-weight:700;}
+  .topbar .brand{font-size:11px;opacity:.8;margin-left:auto;}
+  .roombar{position:absolute;bottom:0;left:0;right:0;z-index:5;display:flex;gap:8px;overflow-x:auto;
+    padding:12px 14px 16px 174px;background:linear-gradient(0deg,rgba(0,0,0,.65),rgba(0,0,0,0));}
+  .roombar.noplan{padding-left:14px;}
+  .roombar button{flex:0 0 auto;background:rgba(30,34,42,.85);color:#fff;border:1px solid rgba(255,255,255,.18);
+    border-radius:22px;padding:9px 16px;font-size:14px;font-family:inherit;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);}
+  .roombar button.active{background:#e8a33d;color:#1a1205;border-color:#e8a33d;font-weight:700;}
+  .pnlm-hotspot.custom-scene{background:#e8a33d;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,.5);}
+  /* 常駐小地圖 */
+  .minimap{position:absolute;left:12px;bottom:70px;z-index:7;width:150px;max-width:40vw;border-radius:10px;
+    overflow:hidden;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.9);background:#f4efe6;line-height:0;}
+  .minimap img{width:100%;display:block;}
+  .mm-dots{position:absolute;inset:0;}
+  .mm-dot{position:absolute;width:10px;height:10px;border-radius:50%;background:#fff;border:1.5px solid #2a2f3a;transform:translate(-50%,-50%);}
+  .mm-dot.current{background:#e8a33d;border-color:#fff;box-shadow:0 0 0 3px rgba(232,163,61,.5);}
+  .mm-tag{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);color:#fff;font-size:10.5px;text-align:center;padding:3px 2px;line-height:1.2;}
+  /* 全螢幕平面圖 */
+  .plan-overlay{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.88);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;}
+  .plan-overlay.show{display:flex;}
+  .ohead{color:#fff;text-align:center;}
+  .ohead b{font-size:18px;display:block;}
+  .ohead span{font-size:13px;color:#cfd3da;}
+  .floor-bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+  .floor-bar button{background:rgba(30,34,42,.9);color:#fff;border:1px solid rgba(255,255,255,.22);
+    border-radius:20px;padding:7px 16px;font-size:14px;font-family:inherit;cursor:pointer;}
+  .floor-bar button.active{background:#e8a33d;color:#1a1205;border-color:#e8a33d;font-weight:700;}
+  .mm-tag b{color:#e8a33d;}
+  .plan-card{position:relative;display:inline-block;line-height:0;}
+  .plan-card img{max-width:94vw;max-height:78vh;display:block;border-radius:10px;}
+  .plan-close{position:absolute;top:-14px;right:-14px;width:38px;height:38px;border-radius:50%;background:#fff;color:#222;border:none;font-size:22px;line-height:1;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.5);z-index:2;}
+  .vmarker{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;}
+  .vmarker .dot{min-width:30px;height:30px;padding:0 6px;border-radius:16px;background:#1f2530;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5);}
+  .vmarker .lbl{font-size:12.5px;font-weight:700;color:#1a1205;background:#fff;padding:2px 9px;border-radius:11px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.35);}
+  .vmarker.current .dot{background:#e8a33d;color:#1a1205;box-shadow:0 0 0 5px rgba(232,163,61,.35),0 2px 8px rgba(0,0,0,.5);}
+  .vmarker.current .lbl{background:#e8a33d;}
+</style>
+</head>
+<body>
+<div id="pano"></div>
+<div class="topbar"><span class="site">五權西路翻新 20260902</span><span class="brand">勝利室內裝修 · 現場全景帶看</span></div>
+<div class="minimap" id="minimap"><img id="mmImg" src="floorplan-1.jpg" alt="平面圖" /><div class="mm-dots" id="mmDots"></div><div class="mm-tag" id="mmTag">🗺 點看平面圖</div></div>
+<div class="roombar" id="roombar"><button data-scene="s1">店門口</button><button data-scene="s2">一樓走道</button><button data-scene="s3">一樓後方走道</button><button data-scene="s4">一樓工作區</button><button data-scene="s5">一樓工作區 2</button><button data-scene="s6">一樓內吧台區</button><button data-scene="s7">一樓辦公桌區</button><button data-scene="s8">員工休息室</button><button data-scene="s9">辦公區內側</button><button data-scene="s10">一樓到二樓樓梯</button><button data-scene="s11">二樓座位區</button><button data-scene="s12">一樓到二樓的梯間</button><button data-scene="s13">二樓座位區 2</button><button data-scene="s14">二樓座位區 3</button><button data-scene="s15">馬桶區</button><button data-scene="s16">洗手間</button><button data-scene="s17">一樓樓梯間儲藏室</button></div>
+<div class="plan-overlay" id="planOverlay">
+  <div class="ohead"><b>五權西路翻新 20260902</b><span>點平面圖上的標籤，進入各空間</span></div>
+  <div class="floor-bar" id="floorBar"></div>
+  <div class="plan-card" id="planCard"><button class="plan-close" id="planClose">×</button><img id="planImg" src="floorplan-1.jpg" alt="平面圖" /></div>
+</div>
+<script>
+  var TOUR = {"default":{"firstScene":"s1","sceneFadeDuration":700,"autoLoad":true,"friction":0.15},"scenes":{"s1":{"title":"店門口","type":"equirectangular","panorama":"images/s1.jpg","autoLoad":true,"hotSpots":[{"pitch":41.3683267088807,"yaw":-5.9583331865530065,"type":"info","text":"製作菜單看板"},{"pitch":-14.468140517705624,"yaw":32.01729693393555,"type":"info","text":"全部檯面改為杜邦人造石"},{"pitch":-10.274198712843335,"yaw":-48.69394792167137,"type":"info","text":"蛋糕櫃原是 8 尺，改為 5 尺"},{"pitch":-24.267387596901184,"yaw":-33.751165755519075,"type":"info","text":"櫃檯與蛋糕櫃的人造石要一體性"},{"pitch":-35.4539614806088,"yaw":-42.96802656956751,"type":"info","text":"地板缺角修復"}]},"s2":{"title":"一樓走道","type":"equirectangular","panorama":"images/s2.jpg","autoLoad":true,"hotSpots":[{"pitch":7.406702184861785,"yaw":40.29208070342643,"type":"info","text":"樓梯下的儲藏室要擴大重新施作"},{"pitch":7.71093310335471,"yaw":72.31322800408526,"type":"info","text":"樓梯下儲藏室包覆預定位置"},{"pitch":-24.705905714821974,"yaw":-171.3615669666997,"type":"info","text":"櫃檯檯面上以立面屏風施作，突出平臺不保留"},{"pitch":45.01010496571354,"yaw":-120.4348306429055,"type":"info","text":"吊隱式冷氣機修復，需拆除天花板（與業主再討論）"}]},"s3":{"title":"一樓後方走道","type":"equirectangular","panorama":"images/s3.jpg","autoLoad":true,"hotSpots":[{"pitch":16.47317586834781,"yaw":22.145555265635743,"type":"info","text":"原提拉米蘇看板拆除，直接做壓克力燈箱或是其他的平面造型設計"},{"pitch":-48.023979882463045,"yaw":-87.25897498659353,"type":"info","text":"新設計不要圓環，直接採用四方倒角的方式去處理"},{"pitch":32.96520426618575,"yaw":90.88094083437574,"type":"info","text":"樓梯口木作修復"},{"pitch":9.97863770373937,"yaw":93.43510109249546,"type":"info","text":"一樓新做油漆完工點"}]},"s4":{"title":"一樓工作區","type":"equirectangular","panorama":"images/s4.jpg","autoLoad":true,"hotSpots":[{"pitch":-33.3116214607144,"yaw":35.32909775478863,"type":"info","text":"工作台重新施作，檯面採用杜邦人造石"},{"pitch":-26.973116378262546,"yaw":127.09535767623804,"type":"info","text":"此處檯面考慮採用不鏽鋼及不鏽鋼水槽"},{"pitch":-33.64900791072901,"yaw":-115.95249253217705,"type":"info","text":"此處櫃體維持原設計，檯面改為杜邦人造石。"},{"pitch":-25.226552023423267,"yaw":-148.09930774912942,"type":"info","text":"此處檯面考慮不鏽鋼檯面與不鏽鋼水槽"},{"pitch":-36.87115442179862,"yaw":107.58400680210319,"type":"info","text":"保留垃圾桶的孔洞"},{"pitch":-61.53793523567323,"yaw":41.262968469631396,"type":"info","text":"櫃體需有門板"}]},"s5":{"title":"一樓工作區 2","type":"equirectangular","panorama":"images/s5.jpg","autoLoad":true,"hotSpots":[]},"s6":{"title":"一樓內吧台區","type":"equirectangular","panorama":"images/s6.jpg","autoLoad":true,"hotSpots":[{"pitch":-23.137212570050256,"yaw":-45.298330201728355,"type":"info","text":"櫃內層板不釘到底，預留走線空間"}]},"s7":{"title":"一樓辦公桌區","type":"equirectangular","panorama":"images/s7.jpg","autoLoad":true,"hotSpots":[{"pitch":-34.78668148007689,"yaw":-145.29538935017212,"type":"info","text":"原有的高櫃及辦公區域維持一樣，辦公桌不要弧形的，然後櫃子側面用個磁性板。"}]},"s8":{"title":"員工休息室","type":"equirectangular","panorama":"images/s8.jpg","autoLoad":true,"hotSpots":[{"pitch":20.28891843273818,"yaw":82.37390244266203,"type":"info","text":"牆面重新刷漆"},{"pitch":-8.244256556402819,"yaw":-111.45214278805074,"type":"info","text":"既有櫃體不動"}]},"s9":{"title":"辦公區內側","type":"equirectangular","panorama":"images/s9.jpg","autoLoad":true,"hotSpots":[{"pitch":27.227034473774342,"yaw":-155.08800803179383,"type":"info","text":"櫃體改為桶身面正面，然後有一個櫃門，這個櫃門上面要有磁性板"},{"pitch":-46.35761874401748,"yaw":165.77573837185153,"type":"info","text":"辦公桌不要弧形"}]},"s10":{"title":"一樓到二樓樓梯","type":"equirectangular","panorama":"images/s10.jpg","autoLoad":true,"hotSpots":[{"pitch":3.8541385906493324,"yaw":107.8669074002325,"type":"info","text":"重新刷漆（與業主討論）"}]},"s11":{"title":"二樓座位區","type":"equirectangular","panorama":"images/s11.jpg","autoLoad":true,"hotSpots":[{"pitch":5.426916383448205,"yaw":-148.9578070823132,"type":"info","text":"二樓重新刷漆"}]},"s12":{"title":"一樓到二樓的梯間","type":"equirectangular","panorama":"images/s12.jpg","autoLoad":true,"hotSpots":[{"pitch":49.57398223859473,"yaw":-137.06438287974058,"type":"info","text":"木作修復"}]},"s13":{"title":"二樓座位區 2","type":"equirectangular","panorama":"images/s13.jpg","autoLoad":true,"hotSpots":[]},"s14":{"title":"二樓座位區 3","type":"equirectangular","panorama":"images/s14.jpg","autoLoad":true,"hotSpots":[]},"s15":{"title":"馬桶區","type":"equirectangular","panorama":"images/s15.jpg","autoLoad":true,"hotSpots":[{"pitch":-68.19234350115964,"yaw":42.87948972302092,"type":"info","text":"擋板處修復"}]},"s16":{"title":"洗手間","type":"equirectangular","panorama":"images/s16.jpg","autoLoad":true,"hotSpots":[]},"s17":{"title":"一樓樓梯間儲藏室","type":"equirectangular","panorama":"images/s17.jpg","autoLoad":true,"hotSpots":[{"pitch":22.049421641999167,"yaw":169.19019602323422,"type":"info","text":"樓梯下儲藏室加大，相關的機器改掛 RC 牆面"}]}}};
+  var VM = {"floors":[{"id":"f1","name":"1F","image":"floorplan-1.jpg"},{"id":"f2","name":"2F","image":"floorplan-2.jpg"}],"markers":[{"sceneId":"s1","x":0.8044634939402897,"y":0.42629815745393634,"floorId":"f1"},{"sceneId":"s2","x":0.6732190363582619,"y":0.31239530988274705,"floorId":"f1"},{"sceneId":"s3","x":0.45329589122080993,"y":0.3274706867671692,"floorId":"f1"},{"sceneId":"s4","x":0.44028968371268107,"y":0.42797319932998323,"floorId":"f1"},{"sceneId":"s5","x":0.44974874371859297,"y":0.533500837520938,"floorId":"f1"},{"sceneId":"s6","x":0.5703517587939698,"y":0.652428810720268,"floorId":"f1"},{"sceneId":"s7","x":0.3847177061779486,"y":0.6273031825795645,"floorId":"f1"},{"sceneId":"s8","x":0.2546556310966598,"y":0.669179229480737,"floorId":"f1"},{"sceneId":"s9","x":0.37289388117055866,"y":0.7378559463986599,"floorId":"f1"},{"sceneId":"s10","x":0.6980490688737807,"y":0.17671691792294808,"floorId":"f1"},{"sceneId":"s11","x":0.29249187112030745,"y":0.7093802345058626,"floorId":"f2"},{"sceneId":"s12","x":0.6223765888264854,"y":0.3073701842546064,"floorId":"f2"},{"sceneId":"s13","x":0.3776234111735146,"y":0.5887772194304858,"floorId":"f2"},{"sceneId":"s14","x":0.3137747561336092,"y":0.42462311557788945,"floorId":"f2"},{"sceneId":"s15","x":0.43319538870824714,"y":0.14154103852596314,"floorId":"f2"},{"sceneId":"s16","x":0.45329589122080993,"y":0.2638190954773869,"floorId":"f2"},{"sceneId":"s17","x":0.5845403488028377,"y":0.18676716917922948,"floorId":"f1"}],"rooms":[{"id":"s1","name":"店門口"},{"id":"s2","name":"一樓走道"},{"id":"s3","name":"一樓後方走道"},{"id":"s4","name":"一樓工作區"},{"id":"s5","name":"一樓工作區 2"},{"id":"s6","name":"一樓內吧台區"},{"id":"s7","name":"一樓辦公桌區"},{"id":"s8","name":"員工休息室"},{"id":"s9","name":"辦公區內側"},{"id":"s10","name":"一樓到二樓樓梯"},{"id":"s11","name":"二樓座位區"},{"id":"s12","name":"一樓到二樓的梯間"},{"id":"s13","name":"二樓座位區 2"},{"id":"s14","name":"二樓座位區 3"},{"id":"s15","name":"馬桶區"},{"id":"s16","name":"洗手間"},{"id":"s17","name":"一樓樓梯間儲藏室"}]};
+  var viewer = pannellum.viewer('pano', TOUR);
+  var bar = document.getElementById('roombar');
+  function syncActive(){var cur=viewer.getScene();[].forEach.call(bar.children,function(b){b.classList.toggle('active',b.getAttribute('data-scene')===cur);});markCurrent();}
+  [].forEach.call(bar.children,function(b){b.onclick=function(){viewer.loadScene(b.getAttribute('data-scene'));};});
+  function floorOfScene(sid){for(var i=0;i<VM.markers.length;i++){if(VM.markers[i].sceneId===sid)return VM.markers[i].floorId;}return null;}
+  function markCurrent(){var cur=viewer.getScene();
+    [].forEach.call(document.querySelectorAll('.vmarker'),function(m){m.classList.toggle('current',m.getAttribute('data-scene')===cur);});
+    [].forEach.call(document.querySelectorAll('.mm-dot'),function(m){m.classList.toggle('current',m.getAttribute('data-scene')===cur);});}
+  if(VM.floors && VM.floors.length){
+    var card=document.getElementById('planCard'),ov=document.getElementById('planOverlay'),mmDots=document.getElementById('mmDots');
+    var planImg=document.getElementById('planImg'),mmImg=document.getElementById('mmImg'),mmTag=document.getElementById('mmTag');
+    var floorBar=document.getElementById('floorBar');
+    var shownFloor=null;              // 大平面圖目前顯示哪層
+    var multi=VM.floors.length>1;
+
+    // 只畫某一層的標籤（大圖可點、小地圖不可點）
+    function renderFloor(fid){
+      shownFloor=fid;
+      var fl=null; for(var i=0;i<VM.floors.length;i++){if(VM.floors[i].id===fid)fl=VM.floors[i];}
+      if(!fl) return;
+      planImg.src=fl.image;
+      [].forEach.call(card.querySelectorAll('.vmarker'),function(m){m.remove();});
+      VM.markers.filter(function(mk){return mk.floorId===fid;}).forEach(function(mk){
+        var idx=-1; for(var i=0;i<VM.rooms.length;i++){if(VM.rooms[i].id===mk.sceneId){idx=i;break;}}
+        if(idx<0) return;
+        var el=document.createElement('div'); el.className='vmarker'; el.setAttribute('data-scene',mk.sceneId);
+        el.style.left=(mk.x*100)+'%'; el.style.top=(mk.y*100)+'%';
+        var dot=document.createElement('div'); dot.className='dot'; dot.textContent=(idx+1);
+        var lbl=document.createElement('div'); lbl.className='lbl'; lbl.textContent=VM.rooms[idx].name;
+        el.appendChild(dot); el.appendChild(lbl);
+        el.onclick=function(){viewer.loadScene(mk.sceneId); ov.classList.remove('show');};
+        card.appendChild(el);
+      });
+      [].forEach.call(floorBar.children,function(b){b.classList.toggle('active',b.getAttribute('data-floor')===fid);});
+      markCurrent();
+    }
+    // 小地圖跟著「目前所在樓層」走
+    function renderMini(fid){
+      var fl=null; for(var i=0;i<VM.floors.length;i++){if(VM.floors[i].id===fid)fl=VM.floors[i];}
+      if(!fl) return;
+      mmImg.src=fl.image; mmDots.innerHTML='';
+      VM.markers.filter(function(mk){return mk.floorId===fid;}).forEach(function(mk){
+        var d=document.createElement('div'); d.className='mm-dot'; d.setAttribute('data-scene',mk.sceneId);
+        d.style.left=(mk.x*100)+'%'; d.style.top=(mk.y*100)+'%'; mmDots.appendChild(d);
+      });
+      mmTag.innerHTML = multi ? ('🗺 <b>'+fl.name+'</b> · 點看平面圖') : '🗺 點看平面圖';
+      markCurrent();
+    }
+    // 樓層頁籤（只有多層才顯示）
+    if(multi){
+      VM.floors.forEach(function(fl){
+        var b=document.createElement('button'); b.textContent=fl.name; b.setAttribute('data-floor',fl.id);
+        b.onclick=function(){renderFloor(fl.id);};
+        floorBar.appendChild(b);
+      });
+    } else { floorBar.style.display='none'; }
+
+    document.getElementById('minimap').onclick=function(){
+      var f=floorOfScene(viewer.getScene())||shownFloor||VM.floors[0].id;
+      renderFloor(f); ov.classList.add('show');
+    };
+    document.getElementById('planClose').onclick=function(){ov.classList.remove('show');};
+    ov.onclick=function(e){if(e.target===ov)ov.classList.remove('show');};
+
+    // 換場景時，小地圖自動切到該場景所在樓層
+    var lastMiniFloor=null;
+    viewer.on('scenechange',function(){
+      var f=floorOfScene(viewer.getScene());
+      if(f && f!==lastMiniFloor){lastMiniFloor=f; renderMini(f);}
+    });
+    var startFloor=floorOfScene(TOUR['default'].firstScene)||VM.floors[0].id;
+    lastMiniFloor=startFloor; renderMini(startFloor); renderFloor(startFloor);
+    ov.classList.add('show'); // 一打開先看平面圖
+  }
+  viewer.on('scenechange',syncActive); viewer.on('load',syncActive); syncActive();
+</script>
+</body>
+</html>
