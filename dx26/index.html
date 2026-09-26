@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>太平區大興十一街 150 巷 22 號環景圖 2 · 現場全景帶看｜勝利室內裝修</title>
+<link rel="stylesheet" href="lib/pannellum.css" />
+<script src="lib/pannellum.js"></script>
+<style>
+  html,body{margin:0;height:100%;background:#000;font-family:"Noto Sans TC","PingFang TC",system-ui,sans-serif;overflow:hidden;}
+  #pano{position:absolute;inset:0;}
+  .topbar{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;align-items:center;gap:10px;
+    padding:10px 14px;background:linear-gradient(180deg,rgba(0,0,0,.6),rgba(0,0,0,0));color:#fff;pointer-events:none;}
+  .topbar .site{font-size:15px;font-weight:700;}
+  .topbar .brand{font-size:11px;opacity:.8;margin-left:auto;}
+  .roombar{position:absolute;bottom:0;left:0;right:0;z-index:5;display:flex;gap:8px;overflow-x:auto;
+    padding:12px 14px 16px 174px;background:linear-gradient(0deg,rgba(0,0,0,.65),rgba(0,0,0,0));}
+  .roombar.noplan{padding-left:14px;}
+  .roombar button{flex:0 0 auto;background:rgba(30,34,42,.85);color:#fff;border:1px solid rgba(255,255,255,.18);
+    border-radius:22px;padding:9px 16px;font-size:14px;font-family:inherit;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);}
+  .roombar button.active{background:#e8a33d;color:#1a1205;border-color:#e8a33d;font-weight:700;}
+  .pnlm-hotspot.custom-scene{background:#e8a33d;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,.5);}
+  /* 常駐小地圖 */
+  .minimap{position:absolute;left:12px;bottom:70px;z-index:7;width:150px;max-width:40vw;border-radius:10px;
+    overflow:hidden;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.9);background:#f4efe6;line-height:0;}
+  .minimap img{width:100%;display:block;}
+  .mm-dots{position:absolute;inset:0;}
+  .mm-dot{position:absolute;width:10px;height:10px;border-radius:50%;background:#fff;border:1.5px solid #2a2f3a;transform:translate(-50%,-50%);}
+  .mm-dot.current{background:#e8a33d;border-color:#fff;box-shadow:0 0 0 3px rgba(232,163,61,.5);}
+  .mm-tag{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);color:#fff;font-size:10.5px;text-align:center;padding:3px 2px;line-height:1.2;}
+  /* 全螢幕平面圖 */
+  .plan-overlay{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.88);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;}
+  .plan-overlay.show{display:flex;}
+  .ohead{color:#fff;text-align:center;}
+  .ohead b{font-size:18px;display:block;}
+  .ohead span{font-size:13px;color:#cfd3da;}
+  .floor-bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+  .floor-bar button{background:rgba(30,34,42,.9);color:#fff;border:1px solid rgba(255,255,255,.22);
+    border-radius:20px;padding:7px 16px;font-size:14px;font-family:inherit;cursor:pointer;}
+  .floor-bar button.active{background:#e8a33d;color:#1a1205;border-color:#e8a33d;font-weight:700;}
+  .mm-tag b{color:#e8a33d;}
+  .plan-card{position:relative;display:inline-block;line-height:0;}
+  .plan-card img{max-width:94vw;max-height:78vh;display:block;border-radius:10px;}
+  .plan-close{position:absolute;top:-14px;right:-14px;width:38px;height:38px;border-radius:50%;background:#fff;color:#222;border:none;font-size:22px;line-height:1;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.5);z-index:2;}
+  .vmarker{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;}
+  .vmarker .dot{min-width:30px;height:30px;padding:0 6px;border-radius:16px;background:#1f2530;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5);}
+  .vmarker .lbl{font-size:12.5px;font-weight:700;color:#1a1205;background:#fff;padding:2px 9px;border-radius:11px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.35);}
+  .vmarker.current .dot{background:#e8a33d;color:#1a1205;box-shadow:0 0 0 5px rgba(232,163,61,.35),0 2px 8px rgba(0,0,0,.5);}
+  .vmarker.current .lbl{background:#e8a33d;}
+</style>
+</head>
+<body>
+<div id="pano"></div>
+<div class="topbar"><span class="site">太平區大興十一街 150 巷 22 號環景圖 2</span><span class="brand">勝利室內裝修 · 現場全景帶看</span></div>
+<div class="minimap" id="minimap"><img id="mmImg" src="floorplan-1.png" alt="平面圖" /><div class="mm-dots" id="mmDots"></div><div class="mm-tag" id="mmTag">🗺 點看平面圖</div></div>
+<div class="roombar" id="roombar"><button data-scene="s1">入口</button><button data-scene="s2">入口2</button><button data-scene="s3">庭院</button><button data-scene="s4">花園</button><button data-scene="s5">客廳</button><button data-scene="s6">客廳2</button><button data-scene="s7">廚房</button><button data-scene="s8">後走道</button><button data-scene="s9">後走道2</button><button data-scene="s10">外側走道</button><button data-scene="s11">外側走道2</button><button data-scene="s12">廁所</button><button data-scene="s13">房間3</button><button data-scene="s14">房間2</button><button data-scene="s15">房間1</button></div>
+<div class="plan-overlay" id="planOverlay">
+  <div class="ohead"><b>太平區大興十一街 150 巷 22 號環景圖 2</b><span>點平面圖上的標籤，進入各空間</span></div>
+  <div class="floor-bar" id="floorBar"></div>
+  <div class="plan-card" id="planCard"><button class="plan-close" id="planClose">×</button><img id="planImg" src="floorplan-1.png" alt="平面圖" /></div>
+</div>
+<script>
+  var TOUR = {"default":{"firstScene":"s1","sceneFadeDuration":700,"autoLoad":true,"friction":0.15},"scenes":{"s1":{"title":"入口","type":"equirectangular","panorama":"images/s1.jpg","autoLoad":true,"hotSpots":[{"pitch":-2.5663494852627036,"yaw":-50.39828247920156,"type":"info","text":"這根柱子打掉，然後最左邊多加一根高度一樣的柱子。"},{"pitch":-2.5638774445089223,"yaw":-41.48935438726083,"type":"info","text":"大門改成鐵的滑門"},{"pitch":-2.029405161737007,"yaw":-18.02979385555117,"type":"info","text":"外牆全部漆石頭漆做防水"},{"pitch":14.605316901438817,"yaw":-25.15585182594601,"type":"info","text":"屋頂鐵皮全部換新"}]},"s2":{"title":"入口2","type":"equirectangular","panorama":"images/s2.jpg","autoLoad":true,"hotSpots":[]},"s3":{"title":"庭院","type":"equirectangular","panorama":"images/s3.jpg","autoLoad":true,"hotSpots":[{"pitch":-11.968547196476043,"yaw":-1.6395238922593247,"type":"info","text":"這根柱子及旁邊的這一面牆全部打掉，然後把柱子移到最右邊。"},{"pitch":-15.164771811841941,"yaw":-22.736659189043998,"type":"info","text":"大門改成滑門"},{"pitch":-5.024041756078804,"yaw":-84.48486650609321,"type":"info","text":"水塔移到房子後面，然後架高"},{"pitch":-47.34276269217156,"yaw":-97.48154683355052,"type":"info","text":"地板打掉，貼 80 × 80 的地磚。"},{"pitch":-44.067341889008276,"yaw":93.5581138625549,"type":"info","text":"既有化糞池的位置要改成 FRP 的新化糞池，並且記得要接管出去預留，之後要接入污水管的管道。"},{"pitch":-14.057597179189798,"yaw":158.24276779870738,"type":"info","text":"外牆立面全部上石頭漆"},{"pitch":6.706612368944154,"yaw":-161.77991896981484,"type":"info","text":"大門（進房子的這扇門）拆除，然後改成硫化銅門，寬度跟高度是 120 公分乘以 220 公分。"},{"pitch":7.513049858068755,"yaw":161.39389473311897,"type":"info","text":"這一扇窗戶拆掉，然後改成窗戶的大小是寬度 120 公分、高度 130 公分，然後距地是 90 公分。"},{"pitch":-9.905360663883261,"yaw":-142.42747290436597,"type":"info","text":"這裡新增一個洗手台，或者是一個冷水的水龍頭（澆花用的）。"},{"pitch":13.721292454207257,"yaw":-143.65438674893554,"type":"info","text":"外立面全部上石頭漆"}]},"s4":{"title":"花園","type":"equirectangular","panorama":"images/s4.jpg","autoLoad":true,"hotSpots":[{"pitch":-11.838816136571054,"yaw":-119.83974265154856,"type":"info","text":"水塔移到後面，架高"},{"pitch":-8.619643261763498,"yaw":-105.00319725339814,"type":"info","text":"兩顆加壓馬達重新改過，用原馬達下去改就好了。"},{"pitch":-59.55964144132079,"yaw":-78.92375541085084,"type":"info","text":"這個花圃還是要保留，先打除之後再放土，面積是 3 米乘以 3 米。"},{"pitch":15.80825614142514,"yaw":54.43373351181022,"type":"info","text":"這個窗戶一樣拆除之後重做。\n\n窗戶改成：\n• 寬度：120 公分\n• 高度：130 公分\n• 距離地板：90 公分\n\n然後外面要記得做雨遮"},{"pitch":-2.9424705515073013,"yaw":83.8928971655063,"type":"info","text":"外立面重新做防水，一樣做石頭漆。"}]},"s5":{"title":"客廳","type":"equirectangular","panorama":"images/s5.jpg","autoLoad":true,"hotSpots":[{"pitch":6.9140210540754925,"yaw":59.17366635029897,"type":"info","text":"這個窗戶拆除，然後改成寬度是 120 公分，高度是 130 公分，距離地板 90 公分"},{"pitch":15.109399357265504,"yaw":32.14518906727557,"type":"info","text":"大門拆除，改成硫化銅門，寬度 120 公分、高度 220 公分"},{"pitch":-35.134087338379565,"yaw":51.316609795233745,"type":"info","text":"地板整個打除，然後改貼 80x80 的地磚"},{"pitch":57.08763042768003,"yaw":50.68198735158951,"type":"info","text":"木骨架拆除後，改成 H 型鋼的鋼架"},{"pitch":-7.610084015344335,"yaw":163.80948250201243,"type":"info","text":"這一面牆不需要剔除"},{"pitch":2.7894347085328506,"yaw":-55.873006649391584,"type":"info","text":"這一面牆表面剔除後，重新上漆，直接上水泥漆，然後百合白"}]},"s6":{"title":"客廳2","type":"equirectangular","panorama":"images/s6.jpg","autoLoad":true,"hotSpots":[{"pitch":7.45008892668688,"yaw":30.78973302883215,"type":"info","text":"這面牆不用剔除，因為後面會直接用木作封板的方式直接封掉。"},{"pitch":-20.35360788113061,"yaw":-6.531446426061849,"type":"info","text":"地面剔除後，貼 80x80 的地磚"},{"pitch":3.033278574980657,"yaw":-39.78300752660326,"type":"info","text":"這面牆面表面剔除後，刷水泥漆百合白。"},{"pitch":-13.512487802994599,"yaw":138.95159946897195,"type":"info","text":"舊有的廚台拆除"},{"pitch":8.441103319154614,"yaw":-153.61987182539468,"type":"info","text":"此牆面打除，浴室要加寬"}]},"s7":{"title":"廚房","type":"equirectangular","panorama":"images/s7.jpg","autoLoad":true,"hotSpots":[{"pitch":-46.08872867368557,"yaw":72.89248587195532,"type":"info","text":"舊有的廚台拆除"},{"pitch":15.677958026447673,"yaw":135.30115183050856,"type":"info","text":"這個窗洞補一扇推拉窗，寬度是 60 公分，高度是 90 公分"},{"pitch":33.71696019251604,"yaw":172.6145091624632,"type":"info","text":"這個後門拆除，上面的洞口補起來，然後下面做一個木門，大小是 80 公分 × 210 公分"},{"pitch":43.14024260815063,"yaw":140.32177773131383,"type":"info","text":"這面牆的表面要剔除，然後重新上水泥漆百合白"},{"pitch":-3.89931180533542,"yaw":-105.97357731960497,"type":"info","text":"這面牆的表面剔除，重新上水泥漆百合白，有壁癌的地方要加強施作。"}]},"s8":{"title":"後走道","type":"equirectangular","panorama":"images/s8.jpg","autoLoad":true,"hotSpots":[{"pitch":-44.49059755974389,"yaw":79.50108521973634,"type":"info","text":"這裡是以後放洗衣機的位置"},{"pitch":-15.988388006126835,"yaw":45.19372339851969,"type":"info","text":"這裡要多加一個排水及冷熱水，要有一個洗手台。"},{"pitch":20.166228538592602,"yaw":67.56533797311867,"type":"info","text":"後陽台的牆面直接上水泥漆就好了"},{"pitch":2.2383317019291322,"yaw":-135.56378859926258,"type":"info","text":"後陽台的牆、後走道的牆面直接上水泥漆"},{"pitch":-43.3077515105298,"yaw":-88.14873638771871,"type":"info","text":"後走道的地面表面剔除後，重新抓洩水"}]},"s9":{"title":"後走道2","type":"equirectangular","panorama":"images/s9.jpg","autoLoad":true,"hotSpots":[{"pitch":1.9646144138899342,"yaw":18.397657193574375,"type":"info","text":"牆面直接上水泥漆"},{"pitch":16.176123977919424,"yaw":152.08190416185528,"type":"info","text":"牆面直接上水泥漆"},{"pitch":2.352609257593896,"yaw":-104.45356740442912,"type":"info","text":"這個後門與上面的窗戶不更換"}]},"s10":{"title":"外側走道","type":"equirectangular","panorama":"images/s10.jpg","autoLoad":true,"hotSpots":[{"pitch":3.9835805977874523,"yaw":-50.528910525249465,"type":"info","text":"外牆直接上石頭漆"},{"pitch":67.8201718774191,"yaw":-76.0949379821566,"type":"info","text":"窗戶外面要留雨遮"}]},"s11":{"title":"外側走道2","type":"equirectangular","panorama":"images/s11.jpg","autoLoad":true,"hotSpots":[{"pitch":6.569837244165743,"yaw":-5.94213677538742,"type":"info","text":"外牆直接上石頭漆，然後加防水粉"},{"pitch":30.93296977785819,"yaw":-19.620400959442282,"type":"info","text":"窗戶都要記得做雨遮"}]},"s12":{"title":"廁所","type":"equirectangular","panorama":"images/s12.jpg","autoLoad":true,"hotSpots":[{"pitch":25.549325688253823,"yaw":-47.57077814703321,"type":"info","text":"這面浴室牆打掉"},{"pitch":-28.675488044259737,"yaw":-144.01269072583239,"type":"info","text":"浴室的牆面剔除，然後改成 30x60 的壁磚"},{"pitch":-66.82470390174447,"yaw":170.0210999791319,"type":"info","text":"浴室裡的舊馬桶、衛浴設備全部拆掉，然後地面改成 30x30 的地磚。"}]},"s13":{"title":"房間3","type":"equirectangular","panorama":"images/s13.jpg","autoLoad":true,"hotSpots":[{"pitch":3.416112669278789,"yaw":71.1589765021184,"type":"info","text":"牆壁表面剔除，重新做防水"},{"pitch":12.204063615282594,"yaw":160.78919757434448,"type":"info","text":"這扇窗戶拆除之後，改成寬度 120、高度 130、距離地面 90 公分的窗戶。\n\n原本的窗戶是寬度 120、高度 150，所以如果改成高度 130 的話，空出來的那個地方要疊磚疊起來。"},{"pitch":19.027454760144014,"yaw":-104.43393442286941,"type":"info","text":"這個窗戶也是一樣喔，原本是寬度 120、高度 180，現在要改成寬度 120、高度 130。\n\n所以要疊磚的範圍是：寬度 120、高度 50。"},{"pitch":-3.7352903324640567,"yaw":-41.342727920310324,"type":"info","text":"牆壁表面剔除後，重新上水泥漆"},{"pitch":-54.562023186963735,"yaw":-44.78105090148591,"type":"info","text":"地板要鋪設木地板"},{"pitch":4.953894689325157,"yaw":6.089587451030157,"type":"info","text":"房間門改成後置門，寬度是 90 公分，高度是 210 公分"}]},"s14":{"title":"房間2","type":"equirectangular","panorama":"images/s14.jpg","autoLoad":true,"hotSpots":[{"pitch":-0.5907518117086542,"yaw":-30.502930252343262,"type":"info","text":"房間門拆除後，改成後置門"},{"pitch":5.081967752985378,"yaw":-66.51936259640756,"type":"info","text":"牆面剔除並上水泥漆"},{"pitch":-47.793209444263915,"yaw":167.96672940338496,"type":"info","text":"地面直接鋪木地板"},{"pitch":16.61762058421828,"yaw":126.88163740896644,"type":"info","text":"這一個窗洞，這一個窗戶補起來"},{"pitch":19.26108427663549,"yaw":63.18682728533863,"type":"info","text":"這裡要開一個窗洞。\n\n窗戶的大小與位置如下：\n• 寬度：120 公分\n• 高度：130 公分\n• 距離地面：90 公分\n• 距離左側牆面：大約 65 公分"}]},"s15":{"title":"房間1","type":"equirectangular","panorama":"images/s15.jpg","autoLoad":true,"hotSpots":[{"pitch":1.5608823670103562,"yaw":45.882369784444045,"type":"info","text":"牆面剔除表面，剔除後重上水泥漆"},{"pitch":-3.245286423169747,"yaw":97.3431766023199,"type":"info","text":"房間門拆除，改成後置門，大小是 90 × 210"},{"pitch":3.695488892213395,"yaw":-128.12275835325966,"type":"info","text":"這扇窗洞補起來"},{"pitch":5.084909094707346,"yaw":-179.32832774956412,"type":"info","text":"這裡開一個窗洞，大小是：\n• 寬度：120 公分\n• 高度：130 公分\n• 距離地板：90 公分\n• 距離左邊的牆面：65 公分"},{"pitch":12.595731200422705,"yaw":-42.8867006559866,"type":"info","text":"這個窗戶拆除後，大小改成寬度 120 公分、高度 130 公分、距離地面 90 公分。原來的窗戶高度是 180 公分，現在改成 130 公分，空出來的地方疊磚。"},{"pitch":-45.55234015955109,"yaw":66.66247185332338,"type":"info","text":"房間地面直接鋪木地板"}]}}};
+  var VM = {"floors":[{"id":"f1","name":"1F","image":"floorplan-1.png"}],"markers":[{"sceneId":"s1","x":0.9954927087936367,"y":0.4128546373671722,"floorId":"f1"},{"sceneId":"s2","x":0.9898365002209456,"y":0.12497678737233055,"floorId":"f1"},{"sceneId":"s3","x":0.8767123287671232,"y":0.7878881667182502,"floorId":"f1"},{"sceneId":"s4","x":0.8755810870525851,"y":0.24382544103992573,"floorId":"f1"},{"sceneId":"s5","x":0.5859832081307998,"y":0.8063757350665429,"floorId":"f1"},{"sceneId":"s6","x":0.4276093680954485,"y":0.785247085525637,"floorId":"f1"},{"sceneId":"s7","x":0.19117984975695979,"y":0.8433508717631281,"floorId":"f1"},{"sceneId":"s8","x":0.07239946973044631,"y":0.8222222222222222,"floorId":"f1"},{"sceneId":"s9","x":0.06448077772867875,"y":0.4947281543381822,"floorId":"f1"},{"sceneId":"s10","x":0.08823685373398144,"y":0.10648921902403796,"floorId":"f1"},{"sceneId":"s11","x":0.3495536897923111,"y":0.10120705663881151,"floorId":"f1"},{"sceneId":"s12","x":0.18552364118426867,"y":0.6188589703910038,"floorId":"f1"},{"sceneId":"s13","x":0.2104109589041096,"y":0.3151346332404828,"floorId":"f1"},{"sceneId":"s14","x":0.42874060980998674,"y":0.30192922727741667,"floorId":"f1"},{"sceneId":"s15","x":0.6346266018559434,"y":0.2913649025069638,"floorId":"f1"}],"rooms":[{"id":"s1","name":"入口"},{"id":"s2","name":"入口2"},{"id":"s3","name":"庭院"},{"id":"s4","name":"花園"},{"id":"s5","name":"客廳"},{"id":"s6","name":"客廳2"},{"id":"s7","name":"廚房"},{"id":"s8","name":"後走道"},{"id":"s9","name":"後走道2"},{"id":"s10","name":"外側走道"},{"id":"s11","name":"外側走道2"},{"id":"s12","name":"廁所"},{"id":"s13","name":"房間3"},{"id":"s14","name":"房間2"},{"id":"s15","name":"房間1"}]};
+  var viewer = pannellum.viewer('pano', TOUR);
+  var bar = document.getElementById('roombar');
+  function syncActive(){var cur=viewer.getScene();[].forEach.call(bar.children,function(b){b.classList.toggle('active',b.getAttribute('data-scene')===cur);});markCurrent();}
+  [].forEach.call(bar.children,function(b){b.onclick=function(){viewer.loadScene(b.getAttribute('data-scene'));};});
+  function floorOfScene(sid){for(var i=0;i<VM.markers.length;i++){if(VM.markers[i].sceneId===sid)return VM.markers[i].floorId;}return null;}
+  function markCurrent(){var cur=viewer.getScene();
+    [].forEach.call(document.querySelectorAll('.vmarker'),function(m){m.classList.toggle('current',m.getAttribute('data-scene')===cur);});
+    [].forEach.call(document.querySelectorAll('.mm-dot'),function(m){m.classList.toggle('current',m.getAttribute('data-scene')===cur);});}
+  if(VM.floors && VM.floors.length){
+    var card=document.getElementById('planCard'),ov=document.getElementById('planOverlay'),mmDots=document.getElementById('mmDots');
+    var planImg=document.getElementById('planImg'),mmImg=document.getElementById('mmImg'),mmTag=document.getElementById('mmTag');
+    var floorBar=document.getElementById('floorBar');
+    var shownFloor=null;              // 大平面圖目前顯示哪層
+    var multi=VM.floors.length>1;
+
+    // 只畫某一層的標籤（大圖可點、小地圖不可點）
+    function renderFloor(fid){
+      shownFloor=fid;
+      var fl=null; for(var i=0;i<VM.floors.length;i++){if(VM.floors[i].id===fid)fl=VM.floors[i];}
+      if(!fl) return;
+      planImg.src=fl.image;
+      [].forEach.call(card.querySelectorAll('.vmarker'),function(m){m.remove();});
+      VM.markers.filter(function(mk){return mk.floorId===fid;}).forEach(function(mk){
+        var idx=-1; for(var i=0;i<VM.rooms.length;i++){if(VM.rooms[i].id===mk.sceneId){idx=i;break;}}
+        if(idx<0) return;
+        var el=document.createElement('div'); el.className='vmarker'; el.setAttribute('data-scene',mk.sceneId);
+        el.style.left=(mk.x*100)+'%'; el.style.top=(mk.y*100)+'%';
+        var dot=document.createElement('div'); dot.className='dot'; dot.textContent=(idx+1);
+        var lbl=document.createElement('div'); lbl.className='lbl'; lbl.textContent=VM.rooms[idx].name;
+        el.appendChild(dot); el.appendChild(lbl);
+        el.onclick=function(){viewer.loadScene(mk.sceneId); ov.classList.remove('show');};
+        card.appendChild(el);
+      });
+      [].forEach.call(floorBar.children,function(b){b.classList.toggle('active',b.getAttribute('data-floor')===fid);});
+      markCurrent();
+    }
+    // 小地圖跟著「目前所在樓層」走
+    function renderMini(fid){
+      var fl=null; for(var i=0;i<VM.floors.length;i++){if(VM.floors[i].id===fid)fl=VM.floors[i];}
+      if(!fl) return;
+      mmImg.src=fl.image; mmDots.innerHTML='';
+      VM.markers.filter(function(mk){return mk.floorId===fid;}).forEach(function(mk){
+        var d=document.createElement('div'); d.className='mm-dot'; d.setAttribute('data-scene',mk.sceneId);
+        d.style.left=(mk.x*100)+'%'; d.style.top=(mk.y*100)+'%'; mmDots.appendChild(d);
+      });
+      mmTag.innerHTML = multi ? ('🗺 <b>'+fl.name+'</b> · 點看平面圖') : '🗺 點看平面圖';
+      markCurrent();
+    }
+    // 樓層頁籤（只有多層才顯示）
+    if(multi){
+      VM.floors.forEach(function(fl){
+        var b=document.createElement('button'); b.textContent=fl.name; b.setAttribute('data-floor',fl.id);
+        b.onclick=function(){renderFloor(fl.id);};
+        floorBar.appendChild(b);
+      });
+    } else { floorBar.style.display='none'; }
+
+    document.getElementById('minimap').onclick=function(){
+      var f=floorOfScene(viewer.getScene())||shownFloor||VM.floors[0].id;
+      renderFloor(f); ov.classList.add('show');
+    };
+    document.getElementById('planClose').onclick=function(){ov.classList.remove('show');};
+    ov.onclick=function(e){if(e.target===ov)ov.classList.remove('show');};
+
+    // 換場景時，小地圖自動切到該場景所在樓層
+    var lastMiniFloor=null;
+    viewer.on('scenechange',function(){
+      var f=floorOfScene(viewer.getScene());
+      if(f && f!==lastMiniFloor){lastMiniFloor=f; renderMini(f);}
+    });
+    var startFloor=floorOfScene(TOUR['default'].firstScene)||VM.floors[0].id;
+    lastMiniFloor=startFloor; renderMini(startFloor); renderFloor(startFloor);
+    ov.classList.add('show'); // 一打開先看平面圖
+  }
+  viewer.on('scenechange',syncActive); viewer.on('load',syncActive); syncActive();
+</script>
+</body>
+</html>
